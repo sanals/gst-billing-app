@@ -1,0 +1,47 @@
+HOW TO VIEW YOUR REACT NATIVE APP
+==================================
+
+Your app is ready! Here's how to view it on your Android emulator:
+
+METHOD 1: Automatic (Recommended)
+----------------------------------
+1. Make sure your Android emulator is running
+2. Open a terminal in this directory
+3. Run: npm run android
+4. Wait for the build to complete (first time takes 2-3 minutes)
+5. The app will automatically open on your emulator
+
+METHOD 2: Manual with Expo Dev Tools
+-------------------------------------
+1. Make sure your Android emulator is running
+2. Open a terminal in this directory
+3. Run: npm start
+4. Wait for the QR code and menu to appear
+5. Press 'a' key to open on Android
+6. The app will install and open on your emulator
+
+METHOD 3: Web Preview (Quick test)
+----------------------------------
+1. Run: npm run web
+2. Your browser will open with the app
+
+TROUBLESHOOTING
+---------------
+If you see "Port 8081 is being used":
+- Run: Stop-Process -Name node -Force
+- Then try again
+
+If the app doesn't install:
+- Make sure emulator is fully booted (you can see the home screen)
+- Check that 'adb devices' shows your emulator as 'device' (not 'offline')
+
+WHAT YOU'LL SEE
+---------------
+✓ Home Screen with welcome message and navigation buttons
+✓ Details Screen with app features
+✓ Settings Screen with settings options
+✓ Beautiful blue, green, and orange themed screens
+✓ Smooth navigation between screens
+
+The app is fully functional and ready to use!
+
