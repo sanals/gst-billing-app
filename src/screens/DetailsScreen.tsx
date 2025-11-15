@@ -1,17 +1,12 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { StackNavigationProp } from '@react-navigation/stack';
 import { colors } from '../constants/colors';
-
-type RootStackParamList = {
-  Home: undefined;
-  Details: undefined;
-  Settings: undefined;
-};
+import { RootStackParamList } from '../navigation/AppNavigator';
 
 type DetailsScreenProps = {
-  navigation: NativeStackNavigationProp<RootStackParamList, 'Details'>;
+  navigation: StackNavigationProp<RootStackParamList, 'Details'>;
 };
 
 export default function DetailsScreen({ navigation }: DetailsScreenProps) {

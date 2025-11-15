@@ -1,17 +1,12 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { StackNavigationProp } from '@react-navigation/stack';
 import { colors } from '../constants/colors';
-
-type RootStackParamList = {
-  Home: undefined;
-  Details: undefined;
-  Settings: undefined;
-};
+import { RootStackParamList } from '../navigation/AppNavigator';
 
 type SettingsScreenProps = {
-  navigation: NativeStackNavigationProp<RootStackParamList, 'Settings'>;
+  navigation: StackNavigationProp<RootStackParamList, 'Settings'>;
 };
 
 export default function SettingsScreen({ navigation }: SettingsScreenProps) {

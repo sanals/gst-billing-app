@@ -8,18 +8,13 @@ import {
   ActivityIndicator 
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { StackNavigationProp } from '@react-navigation/stack';
 import { colors } from '../constants/colors';
 import { PDFService } from '../services/PDFService';
-
-type RootStackParamList = {
-  Home: undefined;
-  Details: undefined;
-  Settings: undefined;
-};
+import { RootStackParamList } from '../navigation/AppNavigator';
 
 type HomeScreenProps = {
-  navigation: NativeStackNavigationProp<RootStackParamList, 'Home'>;
+  navigation: StackNavigationProp<RootStackParamList, 'Home'>;
 };
 
 export default function HomeScreen({ navigation }: HomeScreenProps) {
@@ -53,7 +48,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
       
       <View style={styles.header}>
         <Text style={styles.title}>GST Billing App</Text>
-        <Text style={styles.subtitle}>Phase 2: PDF Generation</Text>
+        <Text style={styles.subtitle}>Phase 3: Product Management</Text>
       </View>
 
       <View style={styles.content}>
@@ -74,6 +69,13 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
           ) : (
             <Text style={styles.buttonText}>Generate Sample Invoice</Text>
           )}
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[styles.button, { marginTop: 20 }]}
+          onPress={() => navigation.navigate('Products')}
+        >
+          <Text style={styles.buttonText}>Manage Products</Text>
         </TouchableOpacity>
 
         <TouchableOpacity 

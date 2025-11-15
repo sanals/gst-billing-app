@@ -5,6 +5,7 @@ export const colors = {
   background: '#F5F5F5',
   white: '#FFFFFF',
   black: '#000000',
+  border: '#E0E0E0',
   text: {
     primary: '#333333',
     secondary: '#666666',
@@ -24,4 +25,7 @@ export const colors = {
     background: '#007AFF',
   },
 };
+
+// Export as COLORS for backward compatibility
+export const COLORS = colors;
 
