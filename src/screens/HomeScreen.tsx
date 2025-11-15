@@ -1,8 +1,16 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  TouchableOpacity, 
+  Alert,
+  ActivityIndicator 
+} from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../constants/colors';
+import { PDFService } from '../services/PDFService';
 
 type RootStackParamList = {
   Home: undefined;
@@ -15,28 +23,64 @@ type HomeScreenProps = {
 };
 
 export default function HomeScreen({ navigation }: HomeScreenProps) {
+  const [loading, setLoading] = useState(false);
+
+  const handleGeneratePDF = async () => {
+    setLoading(true);
+    try {
+      const filePath = await PDFService.generateSampleInvoice();
+      Alert.alert(
+        'Success',
+        'Invoice generated successfully!',
+        [
+          { text: 'OK' },
+          { 
+            text: 'Share', 
+            onPress: () => PDFService.sharePDF(filePath) 
+          },
+        ]
+      );
+    } catch (error) {
+      Alert.alert('Error', 'Failed to generate invoice');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <StatusBar style="auto" />
       
       <View style={styles.header}>
-        <Text style={styles.title}>Welcome to GST Billing</Text>
-        <Text style={styles.subtitle}>Your simple billing solution</Text>
+        <Text style={styles.title}>GST Billing App</Text>
+        <Text style={styles.subtitle}>Phase 2: PDF Generation</Text>
       </View>
 
       <View style={styles.content}>
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>📱 React Native App</Text>
+          <Text style={styles.cardTitle}>📄 Invoice Generator</Text>
           <Text style={styles.cardDescription}>
-            This is a basic React Native app with TypeScript and navigation setup
+            Generate professional GST invoices in PDF format and share via WhatsApp or email
           </Text>
         </View>
 
         <TouchableOpacity 
-          style={styles.button}
+          style={[styles.button, loading && styles.buttonDisabled]}
+          onPress={handleGeneratePDF}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color={colors.white} />
+          ) : (
+            <Text style={styles.buttonText}>Generate Sample Invoice</Text>
+          )}
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.buttonSecondary}
           onPress={() => navigation.navigate('Details')}
         >
-          <Text style={styles.buttonText}>Go to Details</Text>
+          <Text style={styles.buttonSecondaryText}>View Details</Text>
         </TouchableOpacity>
 
         <TouchableOpacity 
@@ -107,6 +151,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     marginBottom: 16,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
   },
   buttonText: {
     color: colors.button.text,
