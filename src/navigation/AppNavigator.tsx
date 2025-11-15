@@ -1,16 +1,21 @@
-import 'react-native-gesture-handler';
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 // Import screens
-import HomeScreen from './screens/HomeScreen';
-import DetailsScreen from './screens/DetailsScreen';
-import SettingsScreen from './screens/SettingsScreen';
+import HomeScreen from '../screens/HomeScreen';
+import DetailsScreen from '../screens/DetailsScreen';
+import SettingsScreen from '../screens/SettingsScreen';
 
-const Stack = createNativeStackNavigator();
+export type RootStackParamList = {
+  Home: undefined;
+  Details: undefined;
+  Settings: undefined;
+};
 
-export default function App() {
+const Stack = createNativeStackNavigator<RootStackParamList>();
+
+export default function AppNavigator() {
   return (
     <NavigationContainer>
       <Stack.Navigator 
@@ -35,3 +40,4 @@ export default function App() {
     </NavigationContainer>
   );
 }
+

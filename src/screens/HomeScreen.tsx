@@ -1,8 +1,20 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { colors } from '../constants/colors';
 
-export default function HomeScreen({ navigation }) {
+type RootStackParamList = {
+  Home: undefined;
+  Details: undefined;
+  Settings: undefined;
+};
+
+type HomeScreenProps = {
+  navigation: NativeStackNavigationProp<RootStackParamList, 'Home'>;
+};
+
+export default function HomeScreen({ navigation }: HomeScreenProps) {
   return (
     <View style={styles.container}>
       <StatusBar style="auto" />
@@ -16,7 +28,7 @@ export default function HomeScreen({ navigation }) {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>📱 React Native App</Text>
           <Text style={styles.cardDescription}>
-            This is a basic React Native app with navigation setup
+            This is a basic React Native app with TypeScript and navigation setup
           </Text>
         </View>
 
@@ -41,10 +53,10 @@ export default function HomeScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.background,
   },
   header: {
-    backgroundColor: '#007AFF',
+    backgroundColor: colors.primary,
     paddingTop: 60,
     paddingBottom: 40,
     paddingHorizontal: 20,
@@ -53,12 +65,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#fff',
+    color: colors.white,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#fff',
+    color: colors.white,
     opacity: 0.9,
   },
   content: {
@@ -67,11 +79,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.card.background,
     borderRadius: 12,
     padding: 20,
     marginBottom: 30,
-    shadowColor: '#000',
+    shadowColor: colors.card.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -81,15 +93,15 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: 'bold',
     marginBottom: 12,
-    color: '#333',
+    color: colors.text.primary,
   },
   cardDescription: {
     fontSize: 16,
-    color: '#666',
+    color: colors.text.secondary,
     lineHeight: 24,
   },
   button: {
-    backgroundColor: '#007AFF',
+    backgroundColor: colors.button.primary,
     paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 12,
@@ -97,21 +109,21 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   buttonText: {
-    color: '#fff',
+    color: colors.button.text,
     fontSize: 18,
     fontWeight: '600',
   },
   buttonSecondary: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.button.secondary,
     paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 12,
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#007AFF',
+    borderColor: colors.button.primary,
   },
   buttonSecondaryText: {
-    color: '#007AFF',
+    color: colors.button.textSecondary,
     fontSize: 18,
     fontWeight: '600',
   },

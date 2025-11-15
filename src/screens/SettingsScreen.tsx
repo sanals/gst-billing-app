@@ -1,8 +1,20 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { colors } from '../constants/colors';
 
-export default function SettingsScreen({ navigation }) {
+type RootStackParamList = {
+  Home: undefined;
+  Details: undefined;
+  Settings: undefined;
+};
+
+type SettingsScreenProps = {
+  navigation: NativeStackNavigationProp<RootStackParamList, 'Settings'>;
+};
+
+export default function SettingsScreen({ navigation }: SettingsScreenProps) {
   return (
     <View style={styles.container}>
       <StatusBar style="auto" />
@@ -61,13 +73,13 @@ export default function SettingsScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.background,
   },
   scrollView: {
     flex: 1,
   },
   header: {
-    backgroundColor: '#FF9500',
+    backgroundColor: colors.accent,
     paddingTop: 60,
     paddingBottom: 40,
     paddingHorizontal: 20,
@@ -76,12 +88,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#fff',
+    color: colors.white,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#fff',
+    color: colors.white,
     opacity: 0.9,
   },
   content: {
@@ -93,19 +105,19 @@ const styles = StyleSheet.create({
   groupTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: colors.text.primary,
     marginBottom: 12,
     paddingLeft: 4,
   },
   settingItem: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.card.background,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
     borderRadius: 12,
     marginBottom: 8,
-    shadowColor: '#000',
+    shadowColor: colors.card.shadow,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
@@ -113,18 +125,18 @@ const styles = StyleSheet.create({
   },
   settingText: {
     fontSize: 16,
-    color: '#333',
+    color: colors.text.primary,
   },
   settingArrow: {
     fontSize: 24,
-    color: '#999',
+    color: colors.text.light,
   },
   settingValue: {
     fontSize: 16,
-    color: '#999',
+    color: colors.text.light,
   },
   button: {
-    backgroundColor: '#FF9500',
+    backgroundColor: colors.accent,
     paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 12,
@@ -132,7 +144,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   buttonText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 18,
     fontWeight: '600',
   },

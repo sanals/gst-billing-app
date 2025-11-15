@@ -24,6 +24,9 @@
   },
   "private": true,
   "devDependencies": {
-    "babel-preset-expo": "^54.0.7"
+    "@types/react": "^19.2.5",
+    "@types/react-native": "^0.72.8",
+    "babel-preset-expo": "^54.0.7",
+    "typescript": "^5.9.3"
   }
 }
