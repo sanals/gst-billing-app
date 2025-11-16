@@ -95,11 +95,6 @@ export default function OutletsScreen({ navigation }: OutletsScreenProps) {
   return (
     <View style={styles.container}>
       <StatusBar style="auto" />
-      
-      <View style={styles.header}>
-        <Text style={styles.title}>Outlets</Text>
-        <Text style={styles.subtitle}>Manage your customer outlets</Text>
-      </View>
 
       <FlatList
         data={outlets}
@@ -131,25 +126,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  header: {
-    backgroundColor: COLORS.accent,
-    paddingTop: 60,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: COLORS.white,
-    marginBottom: 5,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: COLORS.white,
-    opacity: 0.9,
-  },
   list: {
     padding: 15,
+    paddingTop: 20,
   },
   outletCard: {
     backgroundColor: COLORS.card?.background || '#fff',

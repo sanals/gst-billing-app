@@ -3,7 +3,8 @@ import {
   View, 
   Text, 
   StyleSheet, 
-  TouchableOpacity
+  TouchableOpacity,
+  ScrollView
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -16,72 +17,120 @@ type HomeScreenProps = {
 
 export default function HomeScreen({ navigation }: HomeScreenProps) {
 
+  const QuickActionButton = ({ 
+    icon, 
+    title, 
+    subtitle, 
+    onPress, 
+    primary = false 
+  }: {
+    icon: string;
+    title: string;
+    subtitle?: string;
+    onPress: () => void;
+    primary?: boolean;
+  }) => (
+    <TouchableOpacity 
+      style={[styles.quickActionCard, primary && styles.quickActionCardPrimary]}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
+      <View style={styles.quickActionIcon}>
+        <Text style={styles.quickActionIconText}>{icon}</Text>
+      </View>
+      <View style={styles.quickActionContent}>
+        <Text style={[styles.quickActionTitle, primary && styles.quickActionTitlePrimary]}>
+          {title}
+        </Text>
+        {subtitle && (
+          <Text style={[styles.quickActionSubtitle, primary && styles.quickActionSubtitlePrimary]}>
+            {subtitle}
+          </Text>
+        )}
+      </View>
+      <Text style={[styles.quickActionArrow, primary && styles.quickActionArrowPrimary]}>›</Text>
+    </TouchableOpacity>
+  );
+
+  const MenuButton = ({ 
+    icon, 
+    title, 
+    onPress 
+  }: {
+    icon: string;
+    title: string;
+    onPress: () => void;
+  }) => (
+    <TouchableOpacity 
+      style={styles.menuButton}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
+      <Text style={styles.menuButtonIcon}>{icon}</Text>
+      <Text style={styles.menuButtonText}>{title}</Text>
+    </TouchableOpacity>
+  );
+
   return (
     <View style={styles.container}>
-      <StatusBar style="auto" />
+      <StatusBar style="light" />
       
       <View style={styles.header}>
-        <Text style={styles.title}>GST Billing App</Text>
-        <Text style={styles.subtitle}>Phase 4: Invoice Management</Text>
+        <Text style={styles.title}>GST Billing</Text>
       </View>
 
-      <View style={styles.content}>
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>📄 Invoice Generator</Text>
-          <Text style={styles.cardDescription}>
-            Generate professional GST invoices in PDF format and share via WhatsApp or email
-          </Text>
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Quick Actions Section */}
+        <View style={styles.section}>
+          <QuickActionButton
+            icon="📄"
+            title="Create New Invoice"
+            subtitle="Generate GST invoice"
+            onPress={() => navigation.navigate('CreateInvoice')}
+            primary={true}
+          />
         </View>
 
-        <TouchableOpacity 
-          style={[styles.button, { backgroundColor: '#16a34a' }]}
-          onPress={() => navigation.navigate('CreateInvoice')}
-        >
-          <Text style={styles.buttonText}>Create New Invoice</Text>
-        </TouchableOpacity>
+        {/* Management Section */}
+        <View style={styles.section}>
+          <View style={styles.menuGrid}>
+            <MenuButton
+              icon="📦"
+              title="Products"
+              onPress={() => navigation.navigate('Products')}
+            />
+            <MenuButton
+              icon="🏢"
+              title="Outlets"
+              onPress={() => navigation.navigate('Outlets')}
+            />
+            <MenuButton
+              icon="🏛️"
+              title="Company"
+              onPress={() => navigation.navigate('CompanySettings')}
+            />
+            <MenuButton
+              icon="📋"
+              title="Invoices"
+              onPress={() => navigation.navigate('SavedInvoices')}
+            />
+          </View>
+        </View>
 
-        <TouchableOpacity 
-          style={styles.button}
-          onPress={() => navigation.navigate('Products')}
-        >
-          <Text style={styles.buttonText}>Manage Products</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={styles.button}
-          onPress={() => navigation.navigate('Outlets')}
-        >
-          <Text style={styles.buttonText}>Manage Outlets</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={styles.buttonSecondary}
-          onPress={() => navigation.navigate('CompanySettings')}
-        >
-          <Text style={styles.buttonSecondaryText}>Company Settings</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={styles.buttonSecondary}
-          onPress={() => navigation.navigate('SavedInvoices')}
-        >
-          <Text style={styles.buttonSecondaryText}>Saved Invoices</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={styles.buttonSecondary}
-          onPress={() => navigation.navigate('Details')}
-        >
-          <Text style={styles.buttonSecondaryText}>View Details</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={styles.buttonSecondary}
-          onPress={() => navigation.navigate('Settings')}
-        >
-          <Text style={styles.buttonSecondaryText}>Settings</Text>
-        </TouchableOpacity>
-      </View>
+        {/* Settings Section */}
+        <View style={styles.section}>
+          <QuickActionButton
+            icon="⚙️"
+            title="App Settings"
+            subtitle="Backup, sync & preferences"
+            onPress={() => navigation.navigate('Settings')}
+          />
+        </View>
+      </ScrollView>
     </View>
   );
 }
@@ -89,79 +138,128 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: '#F8F9FA',
   },
   header: {
-    backgroundColor: colors.primary,
+    backgroundColor: '#007AFF',
     paddingTop: 60,
-    paddingBottom: 40,
+    paddingBottom: 20,
     paddingHorizontal: 20,
-    alignItems: 'center',
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
+    fontSize: 24,
+    fontWeight: '700',
     color: colors.white,
-    marginBottom: 8,
+    textAlign: 'center',
   },
-  subtitle: {
-    fontSize: 16,
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 20,
+    paddingBottom: 30,
+  },
+  section: {
+    marginBottom: 20,
+  },
+  quickActionCard: {
+    backgroundColor: colors.white,
+    borderRadius: 16,
+    padding: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  quickActionCardPrimary: {
+    backgroundColor: '#16a34a',
+    borderColor: '#16a34a',
+    shadowColor: '#16a34a',
+    shadowOpacity: 0.2,
+    elevation: 6,
+  },
+  quickActionIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 14,
+    backgroundColor: '#F0F9FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  quickActionIconText: {
+    fontSize: 28,
+  },
+  quickActionContent: {
+    flex: 1,
+  },
+  quickActionTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: colors.text.primary,
+    marginBottom: 4,
+  },
+  quickActionTitlePrimary: {
+    color: colors.white,
+  },
+  quickActionSubtitle: {
+    fontSize: 13,
+    color: colors.text.secondary,
+    fontWeight: '400',
+  },
+  quickActionSubtitlePrimary: {
     color: colors.white,
     opacity: 0.9,
   },
-  content: {
-    flex: 1,
-    padding: 20,
+  quickActionArrow: {
+    fontSize: 28,
+    color: colors.text.light,
+    fontWeight: '300',
+    marginLeft: 8,
+  },
+  quickActionArrowPrimary: {
+    color: colors.white,
+    opacity: 0.8,
+  },
+  menuGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  menuButton: {
+    width: '48%',
+    backgroundColor: colors.white,
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
     justifyContent: 'center',
-  },
-  card: {
-    backgroundColor: colors.card.background,
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 30,
-    shadowColor: colors.card.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  cardTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 12,
-    color: colors.text.primary,
-  },
-  cardDescription: {
-    fontSize: 16,
-    color: colors.text.secondary,
-    lineHeight: 24,
-  },
-  button: {
-    backgroundColor: colors.button.primary,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    alignItems: 'center',
     marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    minHeight: 130,
   },
-  buttonText: {
-    color: colors.button.text,
-    fontSize: 18,
+  menuButtonIcon: {
+    fontSize: 40,
+    marginBottom: 12,
+  },
+  menuButtonText: {
+    fontSize: 15,
     fontWeight: '600',
-  },
-  buttonSecondary: {
-    backgroundColor: colors.button.secondary,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: colors.button.primary,
-  },
-  buttonSecondaryText: {
-    color: colors.button.textSecondary,
-    fontSize: 18,
-    fontWeight: '600',
+    color: colors.text.primary,
+    textAlign: 'center',
   },
 });
 
