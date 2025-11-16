@@ -48,7 +48,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
       
       <View style={styles.header}>
         <Text style={styles.title}>GST Billing App</Text>
-        <Text style={styles.subtitle}>Phase 3: Product Management</Text>
+        <Text style={styles.subtitle}>Phase 4: Invoice Management</Text>
       </View>
 
       <View style={styles.content}>
@@ -76,6 +76,13 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
           onPress={() => navigation.navigate('Products')}
         >
           <Text style={styles.buttonText}>Manage Products</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[styles.button, { marginTop: 20, backgroundColor: '#16a34a' }]}
+          onPress={() => navigation.navigate('CreateInvoice')}
+        >
+          <Text style={styles.buttonText}>Create New Invoice</Text>
         </TouchableOpacity>
 
         <TouchableOpacity 
