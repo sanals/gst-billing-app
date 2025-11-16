@@ -83,6 +83,10 @@ export class PDFService {
               font-weight: bold;
               margin: 3px 0;
             }
+            .customer-details > div {
+              margin: 1px 0;
+              line-height: 1.2;
+            }
             table { 
               width: 100%; 
               border-collapse: collapse; 
@@ -185,7 +189,7 @@ export class PDFService {
           <div class="customer-details">
             <div class="customer-label">Bill To:</div>
             <div class="customer-name">${invoice.outletName}</div>
-            ${invoice.outletAddress ? `<div>${invoice.outletAddress}</div>` : ''}
+            ${invoice.outletAddress ? invoice.outletAddress.split('\n').map(line => line.trim()).filter(line => line).map(line => `<div>${line}</div>`).join('') : ''}
             ${invoice.customerGSTNo ? `<div><strong>GST NO:</strong> ${invoice.customerGSTNo}</div>` : ''}
           </div>
 
