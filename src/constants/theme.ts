@@ -74,7 +74,7 @@ export const darkTheme: Theme = {
   success: '#32D74B',
   error: '#FF453A',
   warning: '#FFD60A',
-  background: '#000000',
+  background: '#121212',
   surface: '#1C1C1E',
   card: {
     background: '#1C1C1E',

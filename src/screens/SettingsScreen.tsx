@@ -13,7 +13,7 @@ type SettingsScreenProps = {
 };
 
 export default function SettingsScreen({ navigation }: SettingsScreenProps) {
-  const { theme, themeMode, toggleTheme } = useTheme();
+  const { theme, themeMode, toggleTheme, useSystemTheme, setUseSystemTheme } = useTheme();
   const [backupStatus, setBackupStatus] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [backupMethod, setBackupMethodState] = useState<BackupMethod>('manual');
@@ -287,20 +287,40 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
           {/* Theme Toggle */}
           <View style={styles.settingsGroup}>
             <Text style={styles.groupTitle}>🎨 Appearance</Text>
+            
+            {/* Use System Theme Toggle */}
             <View style={styles.settingRow}>
               <View style={styles.settingInfo}>
-                <Text style={styles.settingLabel}>Dark Mode</Text>
+                <Text style={styles.settingLabel}>Use System Theme</Text>
                 <Text style={styles.settingDescription}>
-                  Switch between light and dark theme
+                  Automatically match device theme
                 </Text>
               </View>
               <Switch
-                value={themeMode === 'dark'}
-                onValueChange={toggleTheme}
+                value={useSystemTheme}
+                onValueChange={setUseSystemTheme}
                 trackColor={{ false: theme.border, true: theme.primary }}
-                thumbColor={themeMode === 'dark' ? theme.surface : theme.text.inverse}
+                thumbColor={useSystemTheme ? theme.text.inverse : theme.border}
               />
             </View>
+
+            {/* Manual Dark Mode Toggle (only shown when not using system theme) */}
+            {!useSystemTheme && (
+              <View style={styles.settingRow}>
+                <View style={styles.settingInfo}>
+                  <Text style={styles.settingLabel}>Dark Mode</Text>
+                  <Text style={styles.settingDescription}>
+                    Switch between light and dark theme
+                  </Text>
+                </View>
+                <Switch
+                  value={themeMode === 'dark'}
+                  onValueChange={toggleTheme}
+                  trackColor={{ false: theme.border, true: theme.primary }}
+                  thumbColor={themeMode === 'dark' ? theme.surface : theme.text.inverse}
+                />
+              </View>
+            )}
           </View>
           <View style={styles.settingsGroup}>
             <Text style={styles.groupTitle}>📦 Backup & Sync</Text>
