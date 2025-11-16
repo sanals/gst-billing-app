@@ -56,6 +56,7 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
   useFocusEffect(
     React.useCallback(() => {
       loadOutlets();
+      loadProducts();
     }, [])
   );
 
@@ -252,13 +253,29 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Products</Text>
-            <TouchableOpacity
-              style={styles.addProductButton}
-              onPress={() => setShowProductPicker(true)}
-            >
-              <Text style={styles.addProductText}>+ Add</Text>
-            </TouchableOpacity>
+            <View style={styles.productActions}>
+              {products.length > 0 && (
+                <TouchableOpacity
+                  style={styles.selectProductButton}
+                  onPress={() => setShowProductPicker(true)}
+                >
+                  <Text style={styles.selectProductText}>Select Product</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                style={styles.addProductButton}
+                onPress={() => navigation.navigate('AddProduct')}
+              >
+                <Text style={styles.addProductText}>+ Add</Text>
+              </TouchableOpacity>
+            </View>
           </View>
+
+          {invoiceItems.length === 0 && (
+            <View style={styles.noProductCard}>
+              <Text style={styles.noProductText}>No products added yet. Select or add a product to continue.</Text>
+            </View>
+          )}
 
           {invoiceItems.map((item) => (
             <View key={item.id} style={styles.itemCard}>
@@ -466,6 +483,20 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
                   </Text>
                 </TouchableOpacity>
               ))}
+              {products.length === 0 && (
+                <View style={styles.emptyModalContent}>
+                  <Text style={styles.emptyModalText}>No products added yet</Text>
+                  <TouchableOpacity
+                    style={styles.addInModalButton}
+                    onPress={() => {
+                      setShowProductPicker(false);
+                      navigation.navigate('AddProduct');
+                    }}
+                  >
+                    <Text style={styles.addInModalText}>+ Add Product</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
             </ScrollView>
           </View>
         </View>
@@ -537,6 +568,21 @@ const styles = StyleSheet.create({
   outletActions: {
     flexDirection: 'row',
     gap: 8,
+  },
+  productActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  selectProductButton: {
+    backgroundColor: COLORS.primary || '#007AFF',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  selectProductText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
   },
   selectOutletButton: {
     backgroundColor: COLORS.primary || '#007AFF',
@@ -651,14 +697,29 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   addProductButton: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 15,
-    paddingVertical: 8,
+    backgroundColor: '#16a34a',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 6,
   },
   addProductText: {
     color: '#fff',
+    fontSize: 12,
     fontWeight: '600',
+  },
+  noProductCard: {
+    backgroundColor: '#fef3c7',
+    borderRadius: 8,
+    padding: 15,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#fbbf24',
+  },
+  noProductText: {
+    fontSize: 14,
+    color: '#92400e',
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
   itemCard: {
     backgroundColor: '#fff',
