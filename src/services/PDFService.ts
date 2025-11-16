@@ -2,9 +2,9 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Invoice } from '../types/invoice';
-import { CompanySettings } from '../types/company';
+import { CompanySettings, DEFAULT_COMPANY_SETTINGS } from '../types/company';
 import { numberToWords } from '../utils/numberToWords';
-import { DEFAULT_COMPANY_SETTINGS } from '../types/company';
+import { BackupService } from './BackupService';
 
 export class PDFService {
   static async generateInvoicePDF(invoice: Invoice, companySettings: CompanySettings | null = null): Promise<string> {
@@ -333,6 +333,15 @@ export class PDFService {
       });
 
       console.log('PDFService: PDF saved successfully to:', savedPath);
+      
+      // Update backup metadata after saving PDF
+      try {
+        await BackupService.updateBackupMetadata();
+      } catch (error) {
+        console.log('Failed to update backup metadata:', error);
+        // Don't fail PDF generation if backup metadata update fails
+      }
+      
       return savedPath;
     } catch (error) {
       console.error('PDFService: Error saving PDF:', error);
@@ -365,7 +374,9 @@ export class PDFService {
 
       // Filter out directories and return only files, sorted by modification time (newest first)
       return fileInfos
-        .filter((info) => info.exists && !info.isDirectory)
+        .filter((info): info is FileSystem.FileInfo & { exists: true; modificationTime?: number } => 
+          info.exists && !info.isDirectory
+        )
         .sort((a, b) => {
           const aTime = a.modificationTime || 0;
           const bTime = b.modificationTime || 0;
