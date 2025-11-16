@@ -8,27 +8,53 @@ import {
   TextInput,
   Alert,
   Modal,
+  Switch,
 } from 'react-native';
 import { COLORS } from '../constants/colors';
 import { Product } from '../types/product';
 import { InvoiceItem } from '../types/invoice';
+import { CompanySettings } from '../types/company';
 import { StorageService } from '../services/StorageService';
-import { calculateLineItem, calculateInvoiceTotals } from '../utils/calculations';
+import { CompanySettingsService } from '../services/CompanySettingsService';
+import { InvoiceCounterService } from '../services/InvoiceCounterService';
+import { calculateLineItem, calculateInvoiceTotals, validateDiscount } from '../utils/calculations';
 
 const CreateInvoiceScreen = ({ navigation }: any) => {
+  // Product & Items
   const [products, setProducts] = useState<Product[]>([]);
   const [invoiceItems, setInvoiceItems] = useState<InvoiceItem[]>([]);
+  
+  // Customer Details
   const [outletName, setOutletName] = useState('');
   const [outletAddress, setOutletAddress] = useState('');
+  const [customerGSTNo, setCustomerGSTNo] = useState('');
+  
+  // Discount
+  const [discountType, setDiscountType] = useState<'none' | 'flat' | 'percent'>('none');
+  const [discountValue, setDiscountValue] = useState('0');
+  
+  // Round Off
+  const [enableRoundOff, setEnableRoundOff] = useState(true);
+  
+  // Company Settings
+  const [companySettings, setCompanySettings] = useState<CompanySettings | null>(null);
+  
+  // UI
   const [showProductPicker, setShowProductPicker] = useState(false);
 
   useEffect(() => {
     loadProducts();
+    loadCompanySettings();
   }, []);
 
   const loadProducts = async () => {
     const data = await StorageService.getProducts();
     setProducts(data);
+  };
+
+  const loadCompanySettings = async () => {
+    const settings = await CompanySettingsService.getSettings();
+    setCompanySettings(settings);
   };
 
   const addProduct = (product: Product) => {
@@ -79,7 +105,8 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
     setInvoiceItems(items => items.filter(item => item.id !== itemId));
   };
 
-  const handleGenerateInvoice = () => {
+  const handleGenerateInvoice = async () => {
+    // Validation
     if (!outletName.trim()) {
       Alert.alert('Error', 'Please enter outlet name');
       return;
@@ -93,21 +120,59 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
       return;
     }
 
-    const totals = calculateInvoiceTotals(invoiceItems);
+    // Validate discount
+    const discountVal = parseFloat(discountValue) || 0;
+    const tempTotals = calculateInvoiceTotals({
+      items: invoiceItems,
+      discountType: 'none',
+      discountValue: 0,
+      enableRoundOff: false,
+    });
+    
+    const discountValidation = validateDiscount(discountType, discountVal, tempTotals.subtotal);
+    if (!discountValidation.valid) {
+      Alert.alert('Invalid Discount', discountValidation.message || 'Please check discount value');
+      return;
+    }
+
+    // Calculate totals with discount
+    const totals = calculateInvoiceTotals({
+      items: invoiceItems,
+      discountType,
+      discountValue: discountVal,
+      enableRoundOff,
+    });
+
+    // Get invoice number
+    const invoicePrefix = companySettings?.invoicePrefix || 'INV';
+    const { number, fullNumber } = await InvoiceCounterService.getNextInvoiceNumber(invoicePrefix);
+    
     navigation.navigate('InvoicePreview', {
       invoice: {
         id: Date.now().toString(),
-        invoiceNumber: `INV${Date.now()}`,
+        invoiceNumber: number,
+        invoicePrefix,
+        fullInvoiceNumber: fullNumber,
         date: new Date().toLocaleDateString(),
         outletName,
         outletAddress,
+        customerGSTNo: customerGSTNo.trim() || undefined,
+        state: companySettings?.state || 'Kerala',
+        stateCode: companySettings?.stateCode || '22',
         items: invoiceItems,
+        discountType,
+        discountValue: discountVal,
         ...totals,
       },
     });
   };
 
-  const totals = calculateInvoiceTotals(invoiceItems);
+  const totals = calculateInvoiceTotals({
+    items: invoiceItems,
+    discountType,
+    discountValue: parseFloat(discountValue) || 0,
+    enableRoundOff,
+  });
 
   return (
     <View style={styles.container}>
@@ -127,6 +192,16 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
             placeholder="Outlet Address (Optional)"
             multiline
             numberOfLines={2}
+          />
+
+          <Text style={styles.label}>Customer GST NO (Optional for B2C)</Text>
+          <TextInput
+            style={styles.input}
+            value={customerGSTNo}
+            onChangeText={(text) => setCustomerGSTNo(text.toUpperCase())}
+            placeholder="22AAUPJ7SS1B12M"
+            autoCapitalize="characters"
+            maxLength={15}
           />
         </View>
 
@@ -204,10 +279,67 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
         {invoiceItems.length > 0 && (
           <View style={styles.summarySection}>
             <Text style={styles.sectionTitle}>Invoice Summary</Text>
+            
+            {/* Subtotal */}
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Subtotal:</Text>
               <Text style={styles.summaryValue}>₹{totals.subtotal}</Text>
             </View>
+
+            {/* Discount Controls */}
+            <View style={styles.discountSection}>
+              <Text style={styles.subSectionTitle}>Discount</Text>
+              <View style={styles.discountTypeRow}>
+                <TouchableOpacity
+                  style={[styles.discountTypeButton, discountType === 'none' && styles.discountTypeButtonActive]}
+                  onPress={() => { setDiscountType('none'); setDiscountValue('0'); }}
+                >
+                  <Text style={[styles.discountTypeText, discountType === 'none' && styles.discountTypeTextActive]}>None</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.discountTypeButton, discountType === 'flat' && styles.discountTypeButtonActive]}
+                  onPress={() => setDiscountType('flat')}
+                >
+                  <Text style={[styles.discountTypeText, discountType === 'flat' && styles.discountTypeTextActive]}>₹ Flat</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.discountTypeButton, discountType === 'percent' && styles.discountTypeButtonActive]}
+                  onPress={() => setDiscountType('percent')}
+                >
+                  <Text style={[styles.discountTypeText, discountType === 'percent' && styles.discountTypeTextActive]}>% Percent</Text>
+                </TouchableOpacity>
+              </View>
+              
+              {discountType !== 'none' && (
+                <TextInput
+                  style={styles.discountInput}
+                  value={discountValue}
+                  onChangeText={setDiscountValue}
+                  placeholder={discountType === 'flat' ? 'Enter amount' : 'Enter percentage'}
+                  keyboardType="decimal-pad"
+                />
+              )}
+            </View>
+
+            {/* Discount Display */}
+            {discountType !== 'none' && totals.discountAmount > 0 && (
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>
+                  Discount ({discountType === 'flat' ? `₹${discountValue}` : `${discountValue}%`}):
+                </Text>
+                <Text style={[styles.summaryValue, { color: '#ef4444' }]}>-₹{totals.discountAmount}</Text>
+              </View>
+            )}
+
+            {/* After Discount */}
+            {discountType !== 'none' && totals.discountAmount > 0 && (
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>After Discount:</Text>
+                <Text style={styles.summaryValue}>₹{totals.subtotalAfterDiscount}</Text>
+              </View>
+            )}
+
+            {/* Taxes */}
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Total CGST:</Text>
               <Text style={styles.summaryValue}>₹{totals.totalCGST}</Text>
@@ -216,6 +348,32 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
               <Text style={styles.summaryLabel}>Total SGST:</Text>
               <Text style={styles.summaryValue}>₹{totals.totalSGST}</Text>
             </View>
+
+            {/* Round Off Toggle */}
+            <View style={styles.roundOffRow}>
+              <View>
+                <Text style={styles.summaryLabel}>Round Off</Text>
+                <Text style={styles.roundOffHint}>Round to nearest rupee</Text>
+              </View>
+              <Switch
+                value={enableRoundOff}
+                onValueChange={setEnableRoundOff}
+                trackColor={{ false: '#E0E0E0', true: COLORS.primary }}
+                thumbColor={enableRoundOff ? '#fff' : '#f4f3f4'}
+              />
+            </View>
+
+            {/* Round Off Amount */}
+            {enableRoundOff && totals.roundOff !== 0 && (
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>Round Off:</Text>
+                <Text style={[styles.summaryValue, { color: totals.roundOff > 0 ? '#16a34a' : '#ef4444' }]}>
+                  {totals.roundOff > 0 ? '+' : ''}₹{totals.roundOff}
+                </Text>
+              </View>
+            )}
+
+            {/* Grand Total */}
             <View style={[styles.summaryRow, styles.grandTotalRow]}>
               <Text style={styles.grandTotalLabel}>Grand Total:</Text>
               <Text style={styles.grandTotalValue}>₹{totals.grandTotal}</Text>
@@ -472,6 +630,77 @@ const styles = StyleSheet.create({
   productOptionDetail: {
     fontSize: 14,
     color: COLORS.text.secondary,
+  },
+  label: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.text.secondary,
+    marginBottom: 5,
+    marginTop: 10,
+  },
+  discountSection: {
+    marginTop: 15,
+    marginBottom: 15,
+    padding: 15,
+    backgroundColor: '#f8fafc',
+    borderRadius: 8,
+  },
+  subSectionTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: COLORS.text.primary,
+    marginBottom: 10,
+  },
+  discountTypeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  discountTypeButton: {
+    flex: 1,
+    padding: 10,
+    marginHorizontal: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+  },
+  discountTypeButtonActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  discountTypeText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.text.secondary,
+  },
+  discountTypeTextActive: {
+    color: '#fff',
+  },
+  discountInput: {
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 6,
+    padding: 12,
+    fontSize: 16,
+    backgroundColor: '#fff',
+    marginTop: 5,
+  },
+  roundOffRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: COLORS.border,
+    marginVertical: 10,
+  },
+  roundOffHint: {
+    fontSize: 11,
+    color: COLORS.text.secondary,
+    marginTop: 2,
   },
 });
 

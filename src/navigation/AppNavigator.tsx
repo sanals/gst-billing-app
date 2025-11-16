@@ -10,6 +10,7 @@ import ProductsScreen from '../screens/ProductsScreen';
 import AddProductScreen from '../screens/AddProductScreen';
 import CreateInvoiceScreen from '../screens/CreateInvoiceScreen';
 import InvoicePreviewScreen from '../screens/InvoicePreviewScreen';
+import CompanySettingsScreen from '../screens/CompanySettingsScreen';
 
 export type RootStackParamList = {
   Home: undefined;
@@ -19,6 +20,7 @@ export type RootStackParamList = {
   AddProduct: { onProductAdded?: () => void };
   CreateInvoice: undefined;
   InvoicePreview: { invoice: any };
+  CompanySettings: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -72,6 +74,11 @@ export default function AppNavigator() {
           name="InvoicePreview" 
           component={InvoicePreviewScreen}
           options={{ title: 'Invoice Preview' }}
+        />
+        <Stack.Screen 
+          name="CompanySettings" 
+          component={CompanySettingsScreen}
+          options={{ title: 'Company Settings' }}
         />
       </Stack.Navigator>
     </NavigationContainer>
