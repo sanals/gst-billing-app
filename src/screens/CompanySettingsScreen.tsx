@@ -13,9 +13,12 @@ import { StatusBar } from 'expo-status-bar';
 import { useTheme } from '../contexts/ThemeContext';
 import { CompanySettings } from '../types/company';
 import { CompanySettingsService } from '../services/CompanySettingsService';
+import { BackupService } from '../services/BackupService';
+import { useGoogleAuth } from '../contexts/GoogleAuthContext';
 
 const CompanySettingsScreen = ({ navigation }: any) => {
   const { theme, themeMode } = useTheme();
+  const { accessToken } = useGoogleAuth();
   const styles = getStyles(theme);
   const [settings, setSettings] = useState<CompanySettings | null>(null);
   const [loading, setLoading] = useState(true);
@@ -73,6 +76,19 @@ const CompanySettingsScreen = ({ navigation }: any) => {
     setSaving(true);
     try {
       await CompanySettingsService.saveSettings(settings);
+      
+      // Check if auto-sync is enabled and sync to Google Drive
+      const autoSyncEnabled = await BackupService.isAutoSyncEnabled();
+      if (autoSyncEnabled && accessToken) {
+        try {
+          await BackupService.syncToGoogleDrive(accessToken);
+          console.log('Company settings synced to Google Drive');
+        } catch (syncError) {
+          console.error('Error syncing to Google Drive:', syncError);
+          // Don't show error to user, just log it
+        }
+      }
+      
       Alert.alert('Success', 'Company settings saved successfully', [
         { text: 'OK', onPress: () => navigation.goBack() },
       ]);
@@ -83,32 +99,38 @@ const CompanySettingsScreen = ({ navigation }: any) => {
     }
   };
 
-  const handleReset = () => {
-    Alert.alert(
-      'Reset to Defaults',
-      'Are you sure you want to reset all settings to default values?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Reset',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await CompanySettingsService.resetToDefaults();
-              await loadSettings();
-              Alert.alert('Success', 'Settings reset to defaults');
-            } catch (error) {
-              Alert.alert('Error', 'Failed to reset settings');
-            }
-          },
-        },
-      ]
-    );
-  };
 
   const updateField = (field: keyof CompanySettings, value: any) => {
     if (!settings) return;
     setSettings({ ...settings, [field]: value });
+  };
+
+  const updateNumericField = (field: keyof CompanySettings, value: string) => {
+    if (!settings) return;
+    // Allow empty string
+    if (value === '') {
+      setSettings({ ...settings, [field]: '' });
+      return;
+    }
+    // Only allow digits
+    const numericRegex = /^[0-9]+$/;
+    if (numericRegex.test(value)) {
+      setSettings({ ...settings, [field]: value });
+    }
+  };
+
+  const updatePhoneField = (field: keyof CompanySettings, value: string) => {
+    if (!settings) return;
+    // Allow empty string
+    if (value === '') {
+      setSettings({ ...settings, [field]: '' });
+      return;
+    }
+    // Only allow digits (no dashes, spaces, or other characters)
+    const numericRegex = /^[0-9]+$/;
+    if (numericRegex.test(value)) {
+      setSettings({ ...settings, [field]: value });
+    }
   };
 
   const updateBankField = (field: keyof CompanySettings['bankDetails'], value: string) => {
@@ -120,6 +142,32 @@ const CompanySettingsScreen = ({ navigation }: any) => {
         [field]: value,
       },
     });
+  };
+
+  const updateNumericBankField = (field: keyof CompanySettings['bankDetails'], value: string) => {
+    if (!settings) return;
+    // Allow empty string
+    if (value === '') {
+      setSettings({
+        ...settings,
+        bankDetails: {
+          ...settings.bankDetails,
+          [field]: '',
+        },
+      });
+      return;
+    }
+    // Only allow digits
+    const numericRegex = /^[0-9]+$/;
+    if (numericRegex.test(value)) {
+      setSettings({
+        ...settings,
+        bankDetails: {
+          ...settings.bankDetails,
+          [field]: value,
+        },
+      });
+    }
   };
 
   if (loading) {
@@ -136,7 +184,10 @@ const CompanySettingsScreen = ({ navigation }: any) => {
   return (
     <View style={styles.container}>
       <StatusBar style={themeMode === 'dark' ? 'light' : 'dark'} />
-      <ScrollView style={styles.scrollView}>
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+      >
         {/* Company Details Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Company Details</Text>
@@ -147,6 +198,7 @@ const CompanySettingsScreen = ({ navigation }: any) => {
             value={settings.name}
             onChangeText={(text) => updateField('name', text)}
             placeholder="Company Name"
+            placeholderTextColor={theme.text.light}
           />
 
           <Text style={styles.label}>Address Line 1 *</Text>
@@ -154,7 +206,8 @@ const CompanySettingsScreen = ({ navigation }: any) => {
             style={styles.input}
             value={settings.address1}
             onChangeText={(text) => updateField('address1', text)}
-            placeholder="MP12/43, Shopping Complex"
+            placeholder="123, Business Park, Main Street"
+            placeholderTextColor={theme.text.light}
           />
 
           <Text style={styles.label}>Address Line 2</Text>
@@ -163,6 +216,7 @@ const CompanySettingsScreen = ({ navigation }: any) => {
             value={settings.address2}
             onChangeText={(text) => updateField('address2', text)}
             placeholder="Area/Locality"
+            placeholderTextColor={theme.text.light}
           />
 
           <View style={styles.row}>
@@ -173,6 +227,7 @@ const CompanySettingsScreen = ({ navigation }: any) => {
                 value={settings.city}
                 onChangeText={(text) => updateField('city', text)}
                 placeholder="City"
+                placeholderTextColor={theme.text.light}
               />
             </View>
             <View style={styles.halfWidth}>
@@ -180,9 +235,10 @@ const CompanySettingsScreen = ({ navigation }: any) => {
               <TextInput
                 style={styles.input}
                 value={settings.pincode}
-                onChangeText={(text) => updateField('pincode', text)}
-                placeholder="834034"
+                onChangeText={(text) => updateNumericField('pincode', text)}
+                placeholder="400001"
                 keyboardType="number-pad"
+                placeholderTextColor={theme.text.light}
               />
             </View>
           </View>
@@ -194,7 +250,8 @@ const CompanySettingsScreen = ({ navigation }: any) => {
                 style={styles.input}
                 value={settings.state}
                 onChangeText={(text) => updateField('state', text)}
-                placeholder="Kerala"
+                placeholder="Maharashtra"
+                placeholderTextColor={theme.text.light}
               />
             </View>
             <View style={styles.halfWidth}>
@@ -202,10 +259,11 @@ const CompanySettingsScreen = ({ navigation }: any) => {
               <TextInput
                 style={styles.input}
                 value={settings.stateCode}
-                onChangeText={(text) => updateField('stateCode', text)}
-                placeholder="22"
+                onChangeText={(text) => updateNumericField('stateCode', text)}
+                placeholder="27"
                 keyboardType="number-pad"
                 maxLength={2}
+                placeholderTextColor={theme.text.light}
               />
             </View>
           </View>
@@ -215,9 +273,10 @@ const CompanySettingsScreen = ({ navigation }: any) => {
             style={styles.input}
             value={settings.gstin}
             onChangeText={(text) => updateField('gstin', text.toUpperCase())}
-            placeholder="22AAUPJ7SS1B12M"
+            placeholder="27ABCDE1234F1Z5"
             autoCapitalize="characters"
             maxLength={15}
+            placeholderTextColor={theme.text.light}
           />
         </View>
 
@@ -229,27 +288,30 @@ const CompanySettingsScreen = ({ navigation }: any) => {
           <TextInput
             style={styles.input}
             value={settings.mobile1}
-            onChangeText={(text) => updateField('mobile1', text)}
-            placeholder="9838884048"
-            keyboardType="phone-pad"
+            onChangeText={(text) => updatePhoneField('mobile1', text)}
+            placeholder="9876543210"
+            keyboardType="number-pad"
+            placeholderTextColor={theme.text.light}
           />
 
           <Text style={styles.label}>Mobile Number 2</Text>
           <TextInput
             style={styles.input}
             value={settings.mobile2 || ''}
-            onChangeText={(text) => updateField('mobile2', text)}
-            placeholder="9211055768"
-            keyboardType="phone-pad"
+            onChangeText={(text) => updatePhoneField('mobile2', text)}
+            placeholder="9876543211"
+            keyboardType="number-pad"
+            placeholderTextColor={theme.text.light}
           />
 
           <Text style={styles.label}>Office Phone</Text>
           <TextInput
             style={styles.input}
             value={settings.officePhone || ''}
-            onChangeText={(text) => updateField('officePhone', text)}
-            placeholder="44929 799627"
-            keyboardType="phone-pad"
+            onChangeText={(text) => updatePhoneField('officePhone', text)}
+            placeholder="02212345678"
+            keyboardType="number-pad"
+            placeholderTextColor={theme.text.light}
           />
 
           <Text style={styles.label}>Email *</Text>
@@ -257,9 +319,10 @@ const CompanySettingsScreen = ({ navigation }: any) => {
             style={styles.input}
             value={settings.email}
             onChangeText={(text) => updateField('email', text)}
-            placeholder="janakienterprises@gmail.com"
+            placeholder="company@example.com"
             keyboardType="email-address"
             autoCapitalize="none"
+            placeholderTextColor={theme.text.light}
           />
         </View>
 
@@ -272,7 +335,8 @@ const CompanySettingsScreen = ({ navigation }: any) => {
             style={styles.input}
             value={settings.bankDetails.accountHolder}
             onChangeText={(text) => updateBankField('accountHolder', text)}
-            placeholder="JANAKI ENTERPRISES"
+            placeholder="ABC ENTERPRISES"
+            placeholderTextColor={theme.text.light}
           />
 
           <Text style={styles.label}>Bank Name *</Text>
@@ -280,16 +344,18 @@ const CompanySettingsScreen = ({ navigation }: any) => {
             style={styles.input}
             value={settings.bankDetails.bankName}
             onChangeText={(text) => updateBankField('bankName', text)}
-            placeholder="INDIAN BANK"
+            placeholder="STATE BANK OF INDIA"
+            placeholderTextColor={theme.text.light}
           />
 
           <Text style={styles.label}>Account Number *</Text>
           <TextInput
             style={styles.input}
             value={settings.bankDetails.accountNumber}
-            onChangeText={(text) => updateBankField('accountNumber', text)}
-            placeholder="7926826378"
+            onChangeText={(text) => updateNumericBankField('accountNumber', text)}
+            placeholder="123456789012"
             keyboardType="number-pad"
+            placeholderTextColor={theme.text.light}
           />
 
           <Text style={styles.label}>Branch *</Text>
@@ -297,7 +363,8 @@ const CompanySettingsScreen = ({ navigation }: any) => {
             style={styles.input}
             value={settings.bankDetails.branch}
             onChangeText={(text) => updateBankField('branch', text)}
-            placeholder="AKATHETRARIA"
+            placeholder="MAIN BRANCH"
+            placeholderTextColor={theme.text.light}
           />
 
           <Text style={styles.label}>IFSC Code *</Text>
@@ -305,8 +372,9 @@ const CompanySettingsScreen = ({ navigation }: any) => {
             style={styles.input}
             value={settings.bankDetails.ifscCode}
             onChangeText={(text) => updateBankField('ifscCode', text.toUpperCase())}
-            placeholder="IDIBD00A007"
+            placeholder="SBIN0001234"
             autoCapitalize="characters"
+            placeholderTextColor={theme.text.light}
           />
         </View>
 
@@ -319,22 +387,13 @@ const CompanySettingsScreen = ({ navigation }: any) => {
             style={styles.input}
             value={settings.invoicePrefix}
             onChangeText={(text) => updateField('invoicePrefix', text.toUpperCase())}
-            placeholder="KTMVS"
+            placeholder="INV"
             autoCapitalize="characters"
+            placeholderTextColor={theme.text.light}
           />
           <Text style={styles.hint}>
             This prefix will be added to all invoice numbers (e.g., KTMVS-101)
           </Text>
-        </View>
-
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity
-            style={styles.resetButton}
-            onPress={handleReset}
-            disabled={saving}
-          >
-            <Text style={styles.resetButtonText}>Reset to Defaults</Text>
-          </TouchableOpacity>
         </View>
       </ScrollView>
 
@@ -371,6 +430,9 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 100, // Add padding to prevent content from being hidden behind the save button
   },
   section: {
     padding: 15,
@@ -410,21 +472,6 @@ const getStyles = (theme: any) => StyleSheet.create({
     color: theme.text.secondary,
     fontStyle: 'italic',
     marginTop: 5,
-  },
-  buttonContainer: {
-    padding: 15,
-    marginBottom: 100,
-  },
-  resetButton: {
-    backgroundColor: theme.error,
-    padding: 15,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  resetButtonText: {
-    color: theme.text.inverse,
-    fontSize: 16,
-    fontWeight: '600',
   },
   saveButton: {
     position: 'absolute',

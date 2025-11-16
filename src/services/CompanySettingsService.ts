@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CompanySettings, DEFAULT_COMPANY_SETTINGS } from '../types/company';
+import { BackupService } from './BackupService';
 
 const COMPANY_SETTINGS_KEY = '@company_settings';
 
@@ -29,6 +30,9 @@ export class CompanySettingsService {
     try {
       await AsyncStorage.setItem(COMPANY_SETTINGS_KEY, JSON.stringify(settings));
       console.log('Company settings saved successfully');
+      
+      // Update backup metadata to include company settings change
+      await BackupService.updateBackupMetadata();
     } catch (error) {
       console.error('Error saving company settings:', error);
       throw error;
@@ -56,11 +60,27 @@ export class CompanySettingsService {
   }
 
   /**
-   * Validate GSTIN format (basic validation)
-   * Format: 22AAUPJ7SS1B12M (2 digit state + 10 alphanumeric + 1 check digit + Z + 1 check digit)
+   * Validate GSTIN format
+   * Format: 15 characters total
+   * - 2 digits: State code (01-37)
+   * - 10 alphanumeric: PAN (Permanent Account Number)
+   * - 1 alphanumeric: Entity number (1-9 or A-Z)
+   * - 1 alphanumeric: Default character (usually 'Z', but can vary)
+   * - 1 alphanumeric: Check code
+   * Example: 22AAUPJ7SS1B12M or 07ABCDE1234F1Z5
+   * 
+   * Note: This is a basic format validation. The actual GSTIN validation
+   * includes checksum verification which is more complex.
    */
   static validateGSTIN(gstin: string): boolean {
-    const gstinRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+    // Must be exactly 15 characters
+    if (gstin.length !== 15) {
+      return false;
+    }
+    
+    // Format: 2 digits + 10 alphanumeric (PAN) + 1 alphanumeric (entity) + 1 alphanumeric + 1 alphanumeric (check)
+    // More flexible: allows any alphanumeric in positions 13 and 14 (not strictly requiring 'Z')
+    const gstinRegex = /^[0-9]{2}[A-Z0-9]{10}[1-9A-Z]{1}[A-Z0-9]{2}$/;
     return gstinRegex.test(gstin);
   }
 

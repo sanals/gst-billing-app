@@ -112,12 +112,12 @@ export class BackupService {
   static async exportData(): Promise<string> {
     try {
       // Get all products
-      const products = await AsyncStorage.getItem('products').then(
+      const products = await AsyncStorage.getItem('@products').then(
         (data) => data ? JSON.parse(data) : []
       ).catch(() => []);
 
       // Get company settings
-      const companySettings = await AsyncStorage.getItem('company_settings').then(
+      const companySettings = await AsyncStorage.getItem('@company_settings').then(
         (data) => data ? JSON.parse(data) : null
       ).catch(() => null);
 
@@ -186,12 +186,12 @@ export class BackupService {
 
       // Restore products
       if (backupData.products) {
-        await AsyncStorage.setItem('products', JSON.stringify(backupData.products));
+        await AsyncStorage.setItem('@products', JSON.stringify(backupData.products));
       }
 
       // Restore company settings
       if (backupData.companySettings) {
-        await AsyncStorage.setItem('company_settings', JSON.stringify(backupData.companySettings));
+        await AsyncStorage.setItem('@company_settings', JSON.stringify(backupData.companySettings));
       }
 
       // Restore invoice counter
@@ -270,11 +270,11 @@ export class BackupService {
   static async syncToGoogleDrive(accessToken: string): Promise<{ success: boolean; message: string }> {
     try {
       // Get all data to backup
-      const products = await AsyncStorage.getItem('products').then(
+      const products = await AsyncStorage.getItem('@products').then(
         (data) => data ? JSON.parse(data) : []
       ).catch(() => []);
 
-      const companySettings = await AsyncStorage.getItem('company_settings').then(
+      const companySettings = await AsyncStorage.getItem('@company_settings').then(
         (data) => data ? JSON.parse(data) : null
       ).catch(() => null);
 
@@ -339,12 +339,12 @@ export class BackupService {
 
       // Restore products
       if (backupData.products) {
-        await AsyncStorage.setItem('products', JSON.stringify(backupData.products));
+        await AsyncStorage.setItem('@products', JSON.stringify(backupData.products));
       }
 
       // Restore company settings
       if (backupData.companySettings) {
-        await AsyncStorage.setItem('company_settings', JSON.stringify(backupData.companySettings));
+        await AsyncStorage.setItem('@company_settings', JSON.stringify(backupData.companySettings));
       }
 
       // Restore invoice counter
