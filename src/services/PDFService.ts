@@ -1,12 +1,16 @@
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { Invoice } from '../types/invoice';
+import { CompanySettings } from '../types/company';
 import { numberToWords } from '../utils/numberToWords';
+import { DEFAULT_COMPANY_SETTINGS } from '../types/company';
 
 export class PDFService {
-  static async generateInvoicePDF(invoice: Invoice): Promise<string> {
+  static async generateInvoicePDF(invoice: Invoice, companySettings: CompanySettings | null = null): Promise<string> {
     console.log('PDFService: Starting invoice PDF generation');
     console.log('PDFService: Invoice has', invoice.items.length, 'items');
+    
+    const company = companySettings || DEFAULT_COMPANY_SETTINGS;
     
     const htmlContent = `
       <!DOCTYPE html>
@@ -15,131 +19,260 @@ export class PDFService {
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
             body { 
               font-family: Arial, sans-serif; 
               padding: 20px;
-              margin: 0;
+              background-color: #FFF9E6;
+              font-size: 12px;
             }
             .header { 
               text-align: center; 
-              margin-bottom: 30px;
-              border-bottom: 2px solid #007AFF;
-              padding-bottom: 20px;
+              margin-bottom: 20px;
+              border-bottom: 3px solid #333;
+              padding-bottom: 15px;
             }
             .company-name { 
-              font-size: 24px; 
+              font-size: 26px; 
               font-weight: bold;
-              color: #007AFF;
+              color: #1a1a1a;
+              margin-bottom: 5px;
+            }
+            .company-details {
+              font-size: 11px;
+              color: #555;
+              line-height: 1.6;
+            }
+            .gstin {
+              font-weight: bold;
+              color: #000;
+              margin-top: 5px;
+            }
+            .invoice-header {
+              display: flex;
+              justify-content: space-between;
+              margin: 15px 0;
+              padding: 10px;
+              background-color: #f0f0f0;
+              border: 1px solid #333;
             }
             .invoice-title { 
-              font-size: 20px; 
-              margin: 20px 0;
+              font-size: 22px; 
               font-weight: bold;
+              color: #000;
             }
-            .details { 
-              margin: 20px 0;
-              background-color: #f5f5f5;
-              padding: 15px;
-              border-radius: 8px;
+            .state-info {
+              text-align: right;
+              font-size: 12px;
+            }
+            .customer-details { 
+              margin: 15px 0;
+              padding: 12px;
+              background-color: #fff;
+              border: 1px solid #333;
+              border-left: 5px solid #333;
+            }
+            .customer-label {
+              font-weight: bold;
+              font-size: 11px;
+              color: #555;
+            }
+            .customer-name {
+              font-size: 14px;
+              font-weight: bold;
+              margin: 3px 0;
             }
             table { 
               width: 100%; 
               border-collapse: collapse; 
               margin: 20px 0;
+              font-size: 11px;
             }
             th, td { 
-              border: 1px solid #ddd; 
-              padding: 12px 8px; 
+              border: 1px solid #333; 
+              padding: 8px 6px; 
               text-align: left;
-              font-size: 14px;
             }
             th { 
-              background-color: #007AFF;
-              color: white;
+              background-color: #e0e0e0;
               font-weight: bold;
+              text-align: center;
+              font-size: 10px;
             }
-            tr:nth-child(even) {
-              background-color: #f9f9f9;
+            td { text-align: center; }
+            td.left { text-align: left; }
+            td.right { text-align: right; }
+            .totals-table {
+              margin-left: auto;
+              width: 350px;
+              border: 2px solid #333;
             }
-            .total { 
-              text-align: right; 
-              font-weight: bold; 
+            .totals-table td {
+              padding: 8px 12px;
+            }
+            .grand-total-row {
+              background-color: #333;
+              color: white;
               font-size: 16px;
-              margin-top: 20px;
-              padding: 15px;
-              background-color: #f5f5f5;
-              border-radius: 8px;
-            }
-            .total div {
-              margin: 8px 0;
-            }
-            .grand-total {
-              font-size: 20px;
-              color: #007AFF;
-              margin-top: 15px;
-              padding-top: 10px;
-              border-top: 2px solid #007AFF;
+              font-weight: bold;
             }
             .amount-words {
               margin: 20px 0;
               padding: 15px;
-              background-color: #f8f8f8;
-              border-left: 4px solid #007AFF;
+              background-color: #fff;
+              border: 2px dashed #fbbf24;
               font-style: italic;
             }
+            .bank-details {
+              margin: 20px 0;
+              padding: 15px;
+              background-color: #f9f9f9;
+              border: 1px solid #333;
+            }
+            .bank-title {
+              font-weight: bold;
+              margin-bottom: 10px;
+              font-size: 13px;
+            }
+            .bank-row {
+              margin: 5px 0;
+              font-size: 12px;
+            }
+            .signature-section {
+              text-align: right;
+              margin-top: 40px;
+            }
+            .for-company {
+              font-weight: bold;
+              margin-bottom: 50px;
+            }
+            .signature-line {
+              border-top: 2px solid #000;
+              width: 200px;
+              margin: 0 0 5px auto;
+            }
+            .discount-row { color: #dc2626; }
+            .roundoff-positive { color: #16a34a; }
+            .roundoff-negative { color: #dc2626; }
           </style>
         </head>
         <body>
           <div class="header">
-            <div class="company-name">JANAKI ENTERPRISES</div>
-            <div>MP12/43, Greenilayam Shopping Complex</div>
-            <div>Postitthol, Kottayam-834034</div>
+            <div class="company-name">${company.name}</div>
+            <div class="company-details">
+              ${company.address1}<br/>
+              ${company.address2}, ${company.city}-${company.pincode}<br/>
+              Mobile: ${company.mobile1}${company.mobile2 ? ', ' + company.mobile2 : ''}
+              ${company.officePhone ? ' | Office: ' + company.officePhone : ''}<br/>
+              Email: ${company.email}<br/>
+              <span class="gstin">GSTIN/UIN: ${company.gstin}</span>
+            </div>
           </div>
-          <div class="invoice-title">
-            TAX INVOICE - ${invoice.invoiceNumber}
-            <br/>Date: ${invoice.date}
+
+          <div class="invoice-header">
+            <div>
+              <div class="invoice-title">TAX INVOICE</div>
+              <div><strong>${invoice.fullInvoiceNumber}</strong></div>
+              <div>Date: ${invoice.date}</div>
+            </div>
+            <div class="state-info">
+              <div><strong>State:</strong> ${invoice.state}</div>
+              <div><strong>Code:</strong> ${invoice.stateCode}</div>
+            </div>
           </div>
-          <div class="details">
-            <strong>Bill To:</strong><br/>
-            ${invoice.outletName}<br/>
-            ${invoice.outletAddress || 'N/A'}
+
+          <div class="customer-details">
+            <div class="customer-label">Bill To:</div>
+            <div class="customer-name">${invoice.outletName}</div>
+            ${invoice.outletAddress ? `<div>${invoice.outletAddress}</div>` : ''}
+            ${invoice.customerGSTNo ? `<div><strong>GST NO:</strong> ${invoice.customerGSTNo}</div>` : ''}
           </div>
+
           <table>
             <thead>
               <tr>
-                <th>S.No</th>
-                <th>Description</th>
-                <th>HSN</th>
-                <th>Qty</th>
-                <th>Rate (₹)</th>
-                <th>CGST (₹)</th>
-                <th>SGST (₹)</th>
-                <th>Amount (₹)</th>
+                <th style="width: 5%;">No</th>
+                <th style="width: 28%;">Description of Goods</th>
+                <th style="width: 8%;">HSN</th>
+                <th style="width: 7%;">ROT%</th>
+                <th style="width: 9%;">Actual</th>
+                <th style="width: 9%;">Billed</th>
+                <th style="width: 10%;">Rate</th>
+                <th style="width: 10%;">CGST</th>
+                <th style="width: 10%;">SGST</th>
+                <th style="width: 10%;">Amount</th>
               </tr>
             </thead>
             <tbody>
               ${invoice.items.map((item, index) => `
                 <tr>
                   <td>${index + 1}</td>
-                  <td>${item.product.name}</td>
+                  <td class="left">${item.product.name}</td>
                   <td>${item.product.hsnCode}</td>
-                  <td>${item.billedQuantity}</td>
-                  <td>${item.unitPrice.toFixed(2)}</td>
-                  <td>${item.cgstAmount.toFixed(2)}</td>
-                  <td>${item.sgstAmount.toFixed(2)}</td>
-                  <td>${item.totalAmount.toFixed(2)}</td>
+                  <td><strong>${item.rotPercent}%</strong></td>
+                  <td>${item.actualQuantity}</td>
+                  <td><strong>${item.billedQuantity}</strong></td>
+                  <td class="right">₹${item.unitPrice.toFixed(2)}</td>
+                  <td class="right">₹${item.cgstAmount.toFixed(2)}</td>
+                  <td class="right">₹${item.sgstAmount.toFixed(2)}</td>
+                  <td class="right"><strong>₹${item.totalAmount.toFixed(2)}</strong></td>
                 </tr>
               `).join('')}
             </tbody>
           </table>
-          <div class="total">
-            <div>Subtotal: ₹${invoice.subtotal.toFixed(2)}</div>
-            <div>Total CGST: ₹${invoice.totalCGST.toFixed(2)}</div>
-            <div>Total SGST: ₹${invoice.totalSGST.toFixed(2)}</div>
-            <div class="grand-total">Grand Total: ₹${invoice.grandTotal.toFixed(2)}</div>
-          </div>
+
+          <table class="totals-table">
+            <tr>
+              <td class="left">Subtotal (Taxable Amount):</td>
+              <td class="right"><strong>₹${invoice.subtotal.toFixed(2)}</strong></td>
+            </tr>
+            ${invoice.discountType !== 'none' && invoice.discountAmount > 0 ? `
+            <tr class="discount-row">
+              <td class="left">Discount (${invoice.discountType === 'flat' ? '₹' + invoice.discountValue : invoice.discountValue + '%'}):</td>
+              <td class="right"><strong>-₹${invoice.discountAmount.toFixed(2)}</strong></td>
+            </tr>
+            <tr>
+              <td class="left">After Discount:</td>
+              <td class="right"><strong>₹${invoice.subtotalAfterDiscount.toFixed(2)}</strong></td>
+            </tr>
+            ` : ''}
+            <tr>
+              <td class="left">Total CGST:</td>
+              <td class="right"><strong>₹${invoice.totalCGST.toFixed(2)}</strong></td>
+            </tr>
+            <tr>
+              <td class="left">Total SGST:</td>
+              <td class="right"><strong>₹${invoice.totalSGST.toFixed(2)}</strong></td>
+            </tr>
+            ${invoice.roundOff !== 0 ? `
+            <tr class="${invoice.roundOff > 0 ? 'roundoff-positive' : 'roundoff-negative'}">
+              <td class="left">Round Off:</td>
+              <td class="right"><strong>${invoice.roundOff > 0 ? '+' : ''}₹${invoice.roundOff.toFixed(2)}</strong></td>
+            </tr>
+            ` : ''}
+            <tr class="grand-total-row">
+              <td class="left">GRAND TOTAL:</td>
+              <td class="right">₹${invoice.grandTotal.toFixed(2)}</td>
+            </tr>
+          </table>
+
           <div class="amount-words">
-            <strong>Amount in Words:</strong> ${numberToWords(invoice.grandTotal)}
+            <strong>Total Invoice Amount in Words:</strong><br/>
+            ${numberToWords(invoice.grandTotal)}
+          </div>
+
+          <div class="bank-details">
+            <div class="bank-title">Company's Bank Details:</div>
+            <div class="bank-row"><strong>A/c Holder's Name:</strong> ${company.bankDetails.accountHolder}</div>
+            <div class="bank-row"><strong>Bank Name:</strong> ${company.bankDetails.bankName}</div>
+            <div class="bank-row"><strong>A/c No.:</strong> ${company.bankDetails.accountNumber}</div>
+            <div class="bank-row"><strong>Branch & IFSC Code:</strong> ${company.bankDetails.branch} & ${company.bankDetails.ifscCode}</div>
+          </div>
+
+          <div class="signature-section">
+            <div class="for-company">For ${company.name}</div>
+            <div class="signature-line"></div>
+            <div>Authorised Signatory</div>
           </div>
         </body>
       </html>
@@ -161,160 +294,6 @@ export class PDFService {
         console.error('PDFService: Error message:', error.message);
         console.error('PDFService: Error stack:', error.stack);
       }
-      throw error;
-    }
-  }
-
-  static async generateSampleInvoice(): Promise<string> {
-    const htmlContent = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <style>
-            body { 
-              font-family: Arial, sans-serif; 
-              padding: 20px;
-              margin: 0;
-            }
-            .header { 
-              text-align: center; 
-              margin-bottom: 30px;
-              border-bottom: 2px solid #007AFF;
-              padding-bottom: 20px;
-            }
-            .company-name { 
-              font-size: 24px; 
-              font-weight: bold;
-              color: #007AFF;
-            }
-            .invoice-title { 
-              font-size: 20px; 
-              margin: 20px 0;
-              font-weight: bold;
-            }
-            .details { 
-              margin: 20px 0;
-              background-color: #f5f5f5;
-              padding: 15px;
-              border-radius: 8px;
-            }
-            table { 
-              width: 100%; 
-              border-collapse: collapse; 
-              margin: 20px 0;
-            }
-            th, td { 
-              border: 1px solid #ddd; 
-              padding: 12px 8px; 
-              text-align: left;
-              font-size: 14px;
-            }
-            th { 
-              background-color: #007AFF;
-              color: white;
-              font-weight: bold;
-            }
-            tr:nth-child(even) {
-              background-color: #f9f9f9;
-            }
-            .total { 
-              text-align: right; 
-              font-weight: bold; 
-              font-size: 16px;
-              margin-top: 20px;
-              padding: 15px;
-              background-color: #f5f5f5;
-              border-radius: 8px;
-            }
-            .total div {
-              margin: 8px 0;
-            }
-            .grand-total {
-              font-size: 20px;
-              color: #007AFF;
-              margin-top: 15px;
-              padding-top: 10px;
-              border-top: 2px solid #007AFF;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <div class="company-name">JANAKI ENTERPRISES</div>
-            <div>Sample Address, Kerala - 834034</div>
-            <div>GSTIN: 22AAUPJ7SS1B12M</div>
-          </div>
-          <div class="invoice-title">
-            TAX INVOICE - 101
-            <br/>Date: ${new Date().toLocaleDateString('en-IN', { 
-              day: '2-digit', 
-              month: 'short', 
-              year: 'numeric' 
-            })}
-          </div>
-          <div class="details">
-            <strong>Bill To:</strong><br/>
-            Sample Outlet<br/>
-            Sample Address<br/>
-            Contact: +91 98765 43210
-          </div>
-          <table>
-            <thead>
-              <tr>
-                <th>S.No</th>
-                <th>Description</th>
-                <th>HSN</th>
-                <th>Qty</th>
-                <th>Rate (₹)</th>
-                <th>CGST (₹)</th>
-                <th>SGST (₹)</th>
-                <th>Amount (₹)</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>1</td>
-                <td>Sample Product 1</td>
-                <td>2516714</td>
-                <td>2</td>
-                <td>200.00</td>
-                <td>18.00</td>
-                <td>18.00</td>
-                <td>436.00</td>
-              </tr>
-              <tr>
-                <td>2</td>
-                <td>Sample Product 2</td>
-                <td>5211</td>
-                <td>5</td>
-                <td>100.00</td>
-                <td>22.50</td>
-                <td>22.50</td>
-                <td>545.00</td>
-              </tr>
-            </tbody>
-          </table>
-          <div class="total">
-            <div>Subtotal: ₹900.00</div>
-            <div>Total CGST: ₹40.50</div>
-            <div>Total SGST: ₹40.50</div>
-            <div class="grand-total">Grand Total: ₹981.00</div>
-          </div>
-        </body>
-      </html>
-    `;
-
-    try {
-      // Generate PDF using expo-print
-      const { uri } = await Print.printToFileAsync({
-        html: htmlContent,
-      });
-      
-      return uri;
-    } catch (error) {
-      console.error('PDF Generation Error:', error);
       throw error;
     }
   }

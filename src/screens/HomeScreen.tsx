@@ -1,16 +1,13 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { 
   View, 
   Text, 
   StyleSheet, 
-  TouchableOpacity, 
-  Alert,
-  ActivityIndicator 
+  TouchableOpacity
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { colors } from '../constants/colors';
-import { PDFService } from '../services/PDFService';
 import { RootStackParamList } from '../navigation/AppNavigator';
 
 type HomeScreenProps = {
@@ -18,29 +15,6 @@ type HomeScreenProps = {
 };
 
 export default function HomeScreen({ navigation }: HomeScreenProps) {
-  const [loading, setLoading] = useState(false);
-
-  const handleGeneratePDF = async () => {
-    setLoading(true);
-    try {
-      const filePath = await PDFService.generateSampleInvoice();
-      Alert.alert(
-        'Success',
-        'Invoice generated successfully!',
-        [
-          { text: 'OK' },
-          { 
-            text: 'Share', 
-            onPress: () => PDFService.sharePDF(filePath) 
-          },
-        ]
-      );
-    } catch (error) {
-      Alert.alert('Error', 'Failed to generate invoice');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <View style={styles.container}>
@@ -60,36 +34,17 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
         </View>
 
         <TouchableOpacity 
-          style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={handleGeneratePDF}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color={colors.white} />
-          ) : (
-            <Text style={styles.buttonText}>Generate Sample Invoice</Text>
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={[styles.button, { marginTop: 20 }]}
-          onPress={() => navigation.navigate('Products')}
-        >
-          <Text style={styles.buttonText}>Manage Products</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={[styles.button, { marginTop: 20, backgroundColor: '#16a34a' }]}
+          style={[styles.button, { backgroundColor: '#16a34a' }]}
           onPress={() => navigation.navigate('CreateInvoice')}
         >
           <Text style={styles.buttonText}>Create New Invoice</Text>
         </TouchableOpacity>
 
         <TouchableOpacity 
-          style={styles.buttonSecondary}
-          onPress={() => navigation.navigate('Details')}
+          style={styles.button}
+          onPress={() => navigation.navigate('Products')}
         >
-          <Text style={styles.buttonSecondaryText}>View Details</Text>
+          <Text style={styles.buttonText}>Manage Products</Text>
         </TouchableOpacity>
 
         <TouchableOpacity 
@@ -97,6 +52,13 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
           onPress={() => navigation.navigate('CompanySettings')}
         >
           <Text style={styles.buttonSecondaryText}>Company Settings</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.buttonSecondary}
+          onPress={() => navigation.navigate('Details')}
+        >
+          <Text style={styles.buttonSecondaryText}>View Details</Text>
         </TouchableOpacity>
 
         <TouchableOpacity 
@@ -167,9 +129,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     marginBottom: 16,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
   },
   buttonText: {
     color: colors.button.text,
