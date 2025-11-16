@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIn
 import { StatusBar } from 'expo-status-bar';
 import { StackNavigationProp } from '@react-navigation/stack';
 import * as DocumentPicker from 'expo-document-picker';
-import { colors } from '../constants/colors';
+import { useTheme } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { BackupService, BackupMethod } from '../services/BackupService';
 import { useGoogleAuth } from '../contexts/GoogleAuthContext';
@@ -13,6 +13,7 @@ type SettingsScreenProps = {
 };
 
 export default function SettingsScreen({ navigation }: SettingsScreenProps) {
+  const { theme, themeMode, toggleTheme } = useTheme();
   const [backupStatus, setBackupStatus] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [backupMethod, setBackupMethodState] = useState<BackupMethod>('manual');
@@ -275,17 +276,32 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
     }
   };
 
+  const styles = getStyles(theme);
+
   return (
     <View style={styles.container}>
-      <StatusBar style="auto" />
+      <StatusBar style={themeMode === 'dark' ? 'light' : 'dark'} />
       
       <ScrollView style={styles.scrollView}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Settings</Text>
-          <Text style={styles.subtitle}>Customize your app</Text>
-        </View>
-
         <View style={styles.content}>
+          {/* Theme Toggle */}
+          <View style={styles.settingsGroup}>
+            <Text style={styles.groupTitle}>🎨 Appearance</Text>
+            <View style={styles.settingRow}>
+              <View style={styles.settingInfo}>
+                <Text style={styles.settingLabel}>Dark Mode</Text>
+                <Text style={styles.settingDescription}>
+                  Switch between light and dark theme
+                </Text>
+              </View>
+              <Switch
+                value={themeMode === 'dark'}
+                onValueChange={toggleTheme}
+                trackColor={{ false: theme.border, true: theme.primary }}
+                thumbColor={themeMode === 'dark' ? theme.surface : theme.text.inverse}
+              />
+            </View>
+          </View>
           <View style={styles.settingsGroup}>
             <Text style={styles.groupTitle}>📦 Backup & Sync</Text>
             
@@ -445,8 +461,8 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
                         value={autoSyncEnabled}
                         onValueChange={handleAutoSyncToggle}
                         disabled={loading}
-                        trackColor={{ false: '#E0E0E0', true: colors.primary || '#007AFF' }}
-                        thumbColor={autoSyncEnabled ? '#fff' : '#f4f3f4'}
+                        trackColor={{ false: theme.border, true: theme.primary }}
+                        thumbColor={autoSyncEnabled ? theme.text.inverse : theme.border}
                       />
                     </View>
 
@@ -524,34 +540,44 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: theme.background,
   },
   scrollView: {
     flex: 1,
   },
-  header: {
-    backgroundColor: colors.accent,
-    paddingTop: 60,
-    paddingBottom: 40,
-    paddingHorizontal: 20,
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: colors.white,
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: colors.white,
-    opacity: 0.9,
-  },
   content: {
     padding: 20,
+    paddingTop: 20,
+  },
+  settingRow: {
+    backgroundColor: theme.card.background,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 8,
+    shadowColor: theme.card.shadow,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  settingInfo: {
+    flex: 1,
+  },
+  settingLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.text.primary,
+    marginBottom: 4,
+  },
+  settingDescription: {
+    fontSize: 13,
+    color: theme.text.secondary,
   },
   settingsGroup: {
     marginBottom: 30,
@@ -559,19 +585,19 @@ const styles = StyleSheet.create({
   groupTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: colors.text.primary,
+    color: theme.text.primary,
     marginBottom: 12,
     paddingLeft: 4,
   },
   settingItem: {
-    backgroundColor: colors.card.background,
+    backgroundColor: theme.card.background,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
     borderRadius: 12,
     marginBottom: 8,
-    shadowColor: colors.card.shadow,
+    shadowColor: theme.card.shadow,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
@@ -579,22 +605,22 @@ const styles = StyleSheet.create({
   },
   settingText: {
     fontSize: 16,
-    color: colors.text.primary,
+    color: theme.text.primary,
   },
   settingArrow: {
     fontSize: 24,
-    color: colors.text.light,
+    color: theme.text.light,
   },
   settingValue: {
     fontSize: 16,
-    color: colors.text.light,
+    color: theme.text.light,
   },
   backupCard: {
-    backgroundColor: colors.card.background,
+    backgroundColor: theme.card.background,
     borderRadius: 12,
     padding: 16,
     marginBottom: 8,
-    shadowColor: colors.card.shadow,
+    shadowColor: theme.card.shadow,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
@@ -603,17 +629,17 @@ const styles = StyleSheet.create({
   backupTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: colors.text.primary,
+    color: theme.text.primary,
     marginBottom: 8,
   },
   backupDescription: {
     fontSize: 14,
-    color: colors.text.secondary,
+    color: theme.text.secondary,
     lineHeight: 20,
     marginBottom: 16,
   },
   backupInfo: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: theme.background,
     borderRadius: 8,
     padding: 12,
     marginBottom: 16,
@@ -625,16 +651,16 @@ const styles = StyleSheet.create({
   },
   backupInfoLabel: {
     fontSize: 14,
-    color: colors.text.secondary,
+    color: theme.text.secondary,
     fontWeight: '500',
   },
   backupInfoValue: {
     fontSize: 14,
-    color: colors.text.primary,
+    color: theme.text.primary,
     fontWeight: '600',
   },
   backupButton: {
-    backgroundColor: colors.primary || '#007AFF',
+    backgroundColor: theme.primary,
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 8,
@@ -644,25 +670,25 @@ const styles = StyleSheet.create({
   backupButtonSecondary: {
     backgroundColor: 'transparent',
     borderWidth: 2,
-    borderColor: colors.primary || '#007AFF',
+    borderColor: theme.primary,
   },
   backupButtonRestore: {
-    backgroundColor: '#16a34a',
+    backgroundColor: theme.success,
     marginTop: 5,
   },
   backupButtonText: {
-    color: colors.white,
+    color: theme.text.inverse,
     fontSize: 16,
     fontWeight: '600',
   },
   backupButtonTextSecondary: {
-    color: colors.primary || '#007AFF',
+    color: theme.primary,
     fontSize: 16,
     fontWeight: '600',
   },
   backupNote: {
     fontSize: 12,
-    color: colors.text.secondary,
+    color: theme.text.secondary,
     fontStyle: 'italic',
     marginTop: 8,
     textAlign: 'center',
@@ -671,11 +697,11 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   methodCard: {
-    backgroundColor: colors.card.background,
+    backgroundColor: theme.card.background,
     borderRadius: 12,
     padding: 16,
     marginBottom: 15,
-    shadowColor: colors.card.shadow,
+    shadowColor: theme.card.shadow,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
@@ -684,7 +710,7 @@ const styles = StyleSheet.create({
   methodTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.text.primary,
+    color: theme.text.primary,
     marginBottom: 12,
   },
   methodButtons: {
@@ -695,43 +721,43 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 15,
     borderRadius: 8,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.background,
     alignItems: 'center',
     borderWidth: 2,
     borderColor: 'transparent',
   },
   methodButtonActive: {
-    backgroundColor: '#e3f2fd',
-    borderColor: colors.primary || '#007AFF',
+    backgroundColor: theme.background,
+    borderColor: theme.primary,
   },
   methodButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.text.secondary,
+    color: theme.text.secondary,
     marginBottom: 4,
   },
   methodButtonTextActive: {
-    color: colors.primary || '#007AFF',
+    color: theme.primary,
   },
   methodButtonDesc: {
     fontSize: 12,
-    color: colors.text.secondary,
+    color: theme.text.secondary,
   },
   googleUserInfo: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: theme.background,
     borderRadius: 8,
     padding: 12,
     marginBottom: 16,
   },
   googleUserLabel: {
     fontSize: 12,
-    color: colors.text.secondary,
+    color: theme.text.secondary,
     marginBottom: 4,
   },
   googleUserEmail: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.text.primary,
+    color: theme.text.primary,
     marginBottom: 8,
   },
   googleSignOutButton: {
@@ -739,11 +765,11 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 6,
-    backgroundColor: '#ffebee',
+    backgroundColor: theme.error + '20',
   },
   googleSignOutText: {
     fontSize: 12,
-    color: '#c62828',
+    color: theme.error,
     fontWeight: '600',
   },
   autoSyncRow: {
@@ -751,7 +777,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 12,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: theme.background,
     borderRadius: 8,
     marginBottom: 16,
   },
@@ -761,15 +787,15 @@ const styles = StyleSheet.create({
   autoSyncLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.text.primary,
+    color: theme.text.primary,
     marginBottom: 2,
   },
   autoSyncDesc: {
     fontSize: 12,
-    color: colors.text.secondary,
+    color: theme.text.secondary,
   },
   button: {
-    backgroundColor: colors.accent,
+    backgroundColor: theme.primary,
     paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 12,
@@ -777,7 +803,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   buttonText: {
-    color: colors.white,
+    color: theme.text.inverse,
     fontSize: 18,
     fontWeight: '600',
   },

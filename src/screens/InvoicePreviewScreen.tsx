@@ -8,7 +8,8 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { COLORS } from '../constants/colors';
+import { StatusBar } from 'expo-status-bar';
+import { useTheme } from '../contexts/ThemeContext';
 import { Invoice } from '../types/invoice';
 import { CompanySettings } from '../types/company';
 import { PDFService } from '../services/PDFService';
@@ -17,6 +18,8 @@ import { InvoiceCounterService } from '../services/InvoiceCounterService';
 import { numberToWords } from '../utils/numberToWords';
 
 const InvoicePreviewScreen = ({ route, navigation }: any) => {
+  const { theme, themeMode } = useTheme();
+  const styles = getStyles(theme);
   const { invoice } = route.params as { invoice: Invoice };
   const [generating, setGenerating] = React.useState(false);
   const [companySettings, setCompanySettings] = React.useState<CompanySettings | null>(null);
@@ -79,6 +82,7 @@ const InvoicePreviewScreen = ({ route, navigation }: any) => {
 
   return (
     <View style={styles.container}>
+      <StatusBar style={themeMode === 'dark' ? 'light' : 'dark'} />
       <ScrollView style={styles.scrollView}>
         <View style={styles.preview}>
           <Text style={styles.companyName}>{companySettings?.name || 'JANAKI ENTERPRISES'}</Text>
@@ -151,7 +155,7 @@ const InvoicePreviewScreen = ({ route, navigation }: any) => {
                   <Text style={styles.totalLabel}>
                     Discount ({invoice.discountType === 'flat' ? `₹${invoice.discountValue}` : `${invoice.discountValue}%`}):
                   </Text>
-                  <Text style={[styles.totalValue, { color: '#ef4444' }]}>-₹{invoice.discountAmount}</Text>
+                  <Text style={[styles.totalValue, { color: theme.error }]}>-₹{invoice.discountAmount}</Text>
                 </View>
                 <View style={styles.totalRow}>
                   <Text style={styles.totalLabel}>After Discount:</Text>
@@ -173,7 +177,7 @@ const InvoicePreviewScreen = ({ route, navigation }: any) => {
             {invoice.roundOff !== 0 && (
               <View style={styles.totalRow}>
                 <Text style={styles.totalLabel}>Round Off:</Text>
-                <Text style={[styles.totalValue, { color: invoice.roundOff > 0 ? '#16a34a' : '#ef4444' }]}>
+                <Text style={[styles.totalValue, { color: invoice.roundOff > 0 ? theme.success : theme.error }]}>
                   {invoice.roundOff > 0 ? '+' : ''}₹{invoice.roundOff}
                 </Text>
               </View>
@@ -232,7 +236,7 @@ const InvoicePreviewScreen = ({ route, navigation }: any) => {
         disabled={generating}
       >
         {generating ? (
-          <ActivityIndicator color="#fff" />
+          <ActivityIndicator color={theme.text.inverse} />
         ) : (
           <Text style={styles.generateButtonText}>Save & Generate PDF</Text>
         )}
@@ -241,10 +245,10 @@ const InvoicePreviewScreen = ({ route, navigation }: any) => {
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: theme.background,
   },
   scrollView: {
     flex: 1,
@@ -252,26 +256,26 @@ const styles = StyleSheet.create({
   preview: {
     margin: 15,
     padding: 20,
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: theme.border,
   },
   companyName: {
     fontSize: 22,
     fontWeight: 'bold',
     textAlign: 'center',
-    color: COLORS.text.primary,
+    color: theme.text.primary,
   },
   address: {
     fontSize: 12,
     textAlign: 'center',
-    color: COLORS.text.secondary,
+    color: theme.text.secondary,
   },
   gstin: {
     fontSize: 13,
     textAlign: 'center',
-    color: COLORS.text.primary,
+    color: theme.text.primary,
     fontWeight: '600',
     marginTop: 5,
     marginBottom: 10,
@@ -283,7 +287,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     paddingTop: 10,
     borderTopWidth: 2,
-    borderTopColor: COLORS.border,
+    borderTopColor: theme.border,
   },
   invoiceTitle: {
     fontSize: 20,
@@ -292,11 +296,11 @@ const styles = StyleSheet.create({
   },
   invoiceNumber: {
     fontSize: 16,
-    color: COLORS.text.secondary,
+    color: theme.text.secondary,
   },
   date: {
     fontSize: 14,
-    color: COLORS.text.secondary,
+    color: theme.text.secondary,
   },
   stateInfo: {
     alignItems: 'flex-end',
@@ -304,39 +308,39 @@ const styles = StyleSheet.create({
   stateText: {
     fontSize: 13,
     fontWeight: '600',
-    color: COLORS.text.primary,
+    color: theme.text.primary,
   },
   stateCode: {
     fontSize: 13,
-    color: COLORS.text.secondary,
+    color: theme.text.secondary,
   },
   billTo: {
     marginBottom: 20,
     padding: 15,
-    backgroundColor: '#f8fafc',
+    backgroundColor: theme.background,
     borderRadius: 6,
     borderLeftWidth: 4,
-    borderLeftColor: COLORS.primary,
+    borderLeftColor: theme.primary,
   },
   billToLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: COLORS.text.secondary,
+    color: theme.text.secondary,
     marginBottom: 5,
   },
   billToName: {
     fontSize: 16,
     fontWeight: '700',
-    color: COLORS.text.primary,
+    color: theme.text.primary,
   },
   billToAddress: {
     fontSize: 13,
-    color: COLORS.text.secondary,
+    color: theme.text.secondary,
     marginTop: 3,
   },
   customerGST: {
     fontSize: 12,
-    color: COLORS.text.primary,
+    color: theme.text.primary,
     fontWeight: '600',
     marginTop: 5,
   },
@@ -345,29 +349,29 @@ const styles = StyleSheet.create({
   },
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: '#f1f5f9',
+    backgroundColor: theme.background,
     padding: 10,
     borderRadius: 6,
   },
   th: {
     fontSize: 11,
     fontWeight: '700',
-    color: COLORS.text.primary,
+    color: theme.text.primary,
   },
   tableRow: {
     flexDirection: 'row',
     padding: 10,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: theme.border,
     alignItems: 'center',
   },
   td: {
     fontSize: 12,
-    color: COLORS.text.primary,
+    color: theme.text.primary,
   },
   tdSmall: {
     fontSize: 10,
-    color: COLORS.text.secondary,
+    color: theme.text.secondary,
   },
   totals: {
     marginTop: 10,
@@ -379,59 +383,59 @@ const styles = StyleSheet.create({
   },
   totalLabel: {
     fontSize: 15,
-    color: COLORS.text.secondary,
+    color: theme.text.secondary,
   },
   totalValue: {
     fontSize: 15,
     fontWeight: '600',
-    color: COLORS.text.primary,
+    color: theme.text.primary,
   },
   grandTotal: {
     borderTopWidth: 2,
-    borderTopColor: COLORS.border,
+    borderTopColor: theme.border,
     marginTop: 10,
     paddingTop: 10,
   },
   grandTotalLabel: {
     fontSize: 18,
     fontWeight: '700',
-    color: COLORS.text.primary,
+    color: theme.text.primary,
   },
   grandTotalValue: {
     fontSize: 18,
     fontWeight: '700',
-    color: COLORS.primary,
+    color: theme.primary,
   },
   amountWords: {
     marginTop: 20,
     padding: 15,
-    backgroundColor: '#f8fafc',
+    backgroundColor: theme.background,
     borderRadius: 6,
   },
   amountWordsLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: COLORS.text.secondary,
+    color: theme.text.secondary,
     marginBottom: 5,
   },
   amountWordsText: {
     fontSize: 13,
     fontStyle: 'italic',
-    color: COLORS.text.primary,
+    color: theme.text.primary,
     lineHeight: 18,
   },
   bankDetails: {
     marginTop: 20,
     padding: 15,
-    backgroundColor: '#f8fafc',
+    backgroundColor: theme.background,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: theme.border,
   },
   bankDetailsTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: COLORS.text.primary,
+    color: theme.text.primary,
     marginBottom: 10,
   },
   bankDetailsContent: {
@@ -439,16 +443,16 @@ const styles = StyleSheet.create({
   },
   bankDetailRow: {
     fontSize: 12,
-    color: COLORS.text.secondary,
+    color: theme.text.secondary,
     marginBottom: 5,
   },
   bankDetailLabel: {
     fontWeight: '600',
-    color: COLORS.text.secondary,
+    color: theme.text.secondary,
   },
   bankDetailValue: {
     fontWeight: '400',
-    color: COLORS.text.primary,
+    color: theme.text.primary,
   },
   signatureSection: {
     marginTop: 30,
@@ -458,26 +462,26 @@ const styles = StyleSheet.create({
   forCompany: {
     fontSize: 13,
     fontWeight: '600',
-    color: COLORS.text.primary,
+    color: theme.text.primary,
     marginBottom: 40,
   },
   signatureLine: {
     width: 200,
     height: 1,
-    backgroundColor: COLORS.text.primary,
+    backgroundColor: theme.text.primary,
     marginBottom: 5,
   },
   authorisedSignatory: {
     fontSize: 12,
-    color: COLORS.text.secondary,
+    color: theme.text.secondary,
   },
   generateButton: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: theme.primary,
     padding: 18,
     alignItems: 'center',
   },
   generateButtonText: {
-    color: '#fff',
+    color: theme.text.inverse,
     fontSize: 18,
     fontWeight: '700',
   },

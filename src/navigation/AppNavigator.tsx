@@ -59,7 +59,7 @@ export default function AppNavigator() {
         <Stack.Screen 
           name="Settings" 
           component={SettingsScreen}
-          options={{ headerShown: false }}
+          options={{ title: 'Settings' }}
         />
         <Stack.Screen 
           name="Products" 

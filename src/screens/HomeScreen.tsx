@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { colors } from '../constants/colors';
+import { useTheme } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/AppNavigator';
 
 type HomeScreenProps = {
@@ -16,6 +16,8 @@ type HomeScreenProps = {
 };
 
 export default function HomeScreen({ navigation }: HomeScreenProps) {
+  const { theme, themeMode } = useTheme();
+  const styles = getStyles(theme);
 
   const QuickActionButton = ({ 
     icon, 
@@ -73,7 +75,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
 
   return (
     <View style={styles.container}>
-      <StatusBar style="light" />
+      <StatusBar style={themeMode === 'dark' ? 'light' : 'dark'} />
       
       <View style={styles.header}>
         <Text style={styles.title}>GST Billing</Text>
@@ -135,13 +137,13 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: theme.background,
   },
   header: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.primary,
     paddingTop: 60,
     paddingBottom: 20,
     paddingHorizontal: 20,
@@ -151,7 +153,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: colors.white,
+    color: theme.text.inverse,
     textAlign: 'center',
   },
   scrollView: {
@@ -165,24 +167,24 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   quickActionCard: {
-    backgroundColor: colors.white,
+    backgroundColor: theme.surface,
     borderRadius: 16,
     padding: 18,
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 12,
-    shadowColor: '#000',
+    shadowColor: theme.card.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 8,
     elevation: 3,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.border,
   },
   quickActionCardPrimary: {
-    backgroundColor: '#16a34a',
-    borderColor: '#16a34a',
-    shadowColor: '#16a34a',
+    backgroundColor: theme.success,
+    borderColor: theme.success,
+    shadowColor: theme.success,
     shadowOpacity: 0.2,
     elevation: 6,
   },
@@ -190,7 +192,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 14,
-    backgroundColor: '#F0F9FF',
+    backgroundColor: theme.background,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
@@ -204,29 +206,29 @@ const styles = StyleSheet.create({
   quickActionTitle: {
     fontSize: 17,
     fontWeight: '600',
-    color: colors.text.primary,
+    color: theme.text.primary,
     marginBottom: 4,
   },
   quickActionTitlePrimary: {
-    color: colors.white,
+    color: theme.text.inverse,
   },
   quickActionSubtitle: {
     fontSize: 13,
-    color: colors.text.secondary,
+    color: theme.text.secondary,
     fontWeight: '400',
   },
   quickActionSubtitlePrimary: {
-    color: colors.white,
+    color: theme.text.inverse,
     opacity: 0.9,
   },
   quickActionArrow: {
     fontSize: 28,
-    color: colors.text.light,
+    color: theme.text.light,
     fontWeight: '300',
     marginLeft: 8,
   },
   quickActionArrowPrimary: {
-    color: colors.white,
+    color: theme.text.inverse,
     opacity: 0.8,
   },
   menuGrid: {
@@ -236,19 +238,19 @@ const styles = StyleSheet.create({
   },
   menuButton: {
     width: '48%',
-    backgroundColor: colors.white,
+    backgroundColor: theme.surface,
     borderRadius: 16,
     padding: 24,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
-    shadowColor: '#000',
+    shadowColor: theme.card.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 6,
     elevation: 2,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.border,
     minHeight: 130,
   },
   menuButtonIcon: {
@@ -258,7 +260,7 @@ const styles = StyleSheet.create({
   menuButtonText: {
     fontSize: 15,
     fontWeight: '600',
-    color: colors.text.primary,
+    color: theme.text.primary,
     textAlign: 'center',
   },
 });

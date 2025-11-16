@@ -9,11 +9,14 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { COLORS } from '../constants/colors';
+import { StatusBar } from 'expo-status-bar';
+import { useTheme } from '../contexts/ThemeContext';
 import { CompanySettings } from '../types/company';
 import { CompanySettingsService } from '../services/CompanySettingsService';
 
 const CompanySettingsScreen = ({ navigation }: any) => {
+  const { theme, themeMode } = useTheme();
+  const styles = getStyles(theme);
   const [settings, setSettings] = useState<CompanySettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -122,7 +125,7 @@ const CompanySettingsScreen = ({ navigation }: any) => {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
+        <ActivityIndicator size="large" color={theme.primary} />
         <Text style={styles.loadingText}>Loading settings...</Text>
       </View>
     );
@@ -132,6 +135,7 @@ const CompanySettingsScreen = ({ navigation }: any) => {
 
   return (
     <View style={styles.container}>
+      <StatusBar style={themeMode === 'dark' ? 'light' : 'dark'} />
       <ScrollView style={styles.scrollView}>
         {/* Company Details Section */}
         <View style={styles.section}>
@@ -340,7 +344,7 @@ const CompanySettingsScreen = ({ navigation }: any) => {
         disabled={saving}
       >
         {saving ? (
-          <ActivityIndicator color="#fff" />
+          <ActivityIndicator color={theme.text.inverse} />
         ) : (
           <Text style={styles.saveButtonText}>Save Settings</Text>
         )}
@@ -349,21 +353,21 @@ const CompanySettingsScreen = ({ navigation }: any) => {
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: theme.background,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: COLORS.background,
+    backgroundColor: theme.background,
   },
   loadingText: {
     marginTop: 10,
     fontSize: 16,
-    color: COLORS.text.secondary,
+    color: theme.text.secondary,
   },
   scrollView: {
     flex: 1,
@@ -375,23 +379,24 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: COLORS.text.primary,
+    color: theme.text.primary,
     marginBottom: 15,
   },
   label: {
     fontSize: 13,
     fontWeight: '600',
-    color: COLORS.text.secondary,
+    color: theme.text.secondary,
     marginBottom: 5,
     marginTop: 10,
   },
   input: {
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: theme.border,
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
-    backgroundColor: '#fff',
+    backgroundColor: theme.input.background,
+    color: theme.text.primary,
   },
   row: {
     flexDirection: 'row',
@@ -402,7 +407,7 @@ const styles = StyleSheet.create({
   },
   hint: {
     fontSize: 12,
-    color: COLORS.text.secondary,
+    color: theme.text.secondary,
     fontStyle: 'italic',
     marginTop: 5,
   },
@@ -411,13 +416,13 @@ const styles = StyleSheet.create({
     marginBottom: 100,
   },
   resetButton: {
-    backgroundColor: '#ef4444',
+    backgroundColor: theme.error,
     padding: 15,
     borderRadius: 8,
     alignItems: 'center',
   },
   resetButtonText: {
-    color: '#fff',
+    color: theme.text.inverse,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -426,7 +431,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: COLORS.primary,
+    backgroundColor: theme.primary,
     padding: 18,
     alignItems: 'center',
   },
@@ -434,7 +439,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   saveButtonText: {
-    color: '#fff',
+    color: theme.text.inverse,
     fontSize: 18,
     fontWeight: '700',
   },

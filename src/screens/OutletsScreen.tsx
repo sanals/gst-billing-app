@@ -10,7 +10,7 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useFocusEffect } from '@react-navigation/native';
-import { COLORS } from '../constants/colors';
+import { useTheme } from '../contexts/ThemeContext';
 import { Outlet } from '../types/outlet';
 import { OutletService } from '../services/OutletService';
 import { RootStackParamList } from '../navigation/AppNavigator';
@@ -20,6 +20,8 @@ type OutletsScreenProps = {
 };
 
 export default function OutletsScreen({ navigation }: OutletsScreenProps) {
+  const { theme, themeMode } = useTheme();
+  const styles = getStyles(theme);
   const [outlets, setOutlets] = useState<Outlet[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -94,7 +96,7 @@ export default function OutletsScreen({ navigation }: OutletsScreenProps) {
 
   return (
     <View style={styles.container}>
-      <StatusBar style="auto" />
+      <StatusBar style={themeMode === 'dark' ? 'light' : 'dark'} />
 
       <FlatList
         data={outlets}
@@ -121,23 +123,23 @@ export default function OutletsScreen({ navigation }: OutletsScreenProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: theme.background,
   },
   list: {
     padding: 15,
     paddingTop: 20,
   },
   outletCard: {
-    backgroundColor: COLORS.card?.background || '#fff',
+    backgroundColor: theme.card.background,
     borderRadius: 12,
     padding: 15,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    shadowColor: COLORS.card?.shadow || '#000',
+    borderColor: theme.border,
+    shadowColor: theme.card.shadow,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
@@ -149,17 +151,17 @@ const styles = StyleSheet.create({
   outletName: {
     fontSize: 18,
     fontWeight: '600',
-    color: COLORS.text.primary,
+    color: theme.text.primary,
     marginBottom: 5,
   },
   outletAddress: {
     fontSize: 14,
-    color: COLORS.text.secondary,
+    color: theme.text.secondary,
     marginBottom: 4,
   },
   outletGst: {
     fontSize: 13,
-    color: COLORS.text.secondary,
+    color: theme.text.secondary,
     fontStyle: 'italic',
   },
   outletActions: {
@@ -170,22 +172,22 @@ const styles = StyleSheet.create({
   editButton: {
     paddingHorizontal: 15,
     paddingVertical: 8,
-    backgroundColor: COLORS.primary || '#007AFF',
+    backgroundColor: theme.primary,
     borderRadius: 6,
   },
   editText: {
-    color: '#fff',
+    color: theme.text.inverse,
     fontWeight: '600',
     fontSize: 14,
   },
   deleteButton: {
     paddingHorizontal: 15,
     paddingVertical: 8,
-    backgroundColor: '#ef4444',
+    backgroundColor: theme.error,
     borderRadius: 6,
   },
   deleteText: {
-    color: '#fff',
+    color: theme.text.inverse,
     fontWeight: '600',
     fontSize: 14,
   },
@@ -196,30 +198,30 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 18,
-    color: COLORS.text.secondary,
+    color: theme.text.secondary,
     marginBottom: 8,
   },
   emptySubtext: {
     fontSize: 14,
-    color: COLORS.text.light,
+    color: theme.text.light,
     textAlign: 'center',
   },
   addButton: {
     position: 'absolute',
     bottom: 20,
     right: 20,
-    backgroundColor: COLORS.primary || '#007AFF',
+    backgroundColor: theme.primary,
     paddingHorizontal: 25,
     paddingVertical: 15,
     borderRadius: 25,
     elevation: 5,
-    shadowColor: '#000',
+    shadowColor: theme.card.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
   },
   addButtonText: {
-    color: '#fff',
+    color: theme.text.inverse,
     fontSize: 16,
     fontWeight: '600',
   },

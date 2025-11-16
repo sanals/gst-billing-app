@@ -10,8 +10,9 @@ import {
   Modal,
   Switch,
 } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { useFocusEffect } from '@react-navigation/native';
-import { COLORS } from '../constants/colors';
+import { useTheme } from '../contexts/ThemeContext';
 import { Product } from '../types/product';
 import { InvoiceItem } from '../types/invoice';
 import { CompanySettings } from '../types/company';
@@ -23,6 +24,8 @@ import { Outlet } from '../types/outlet';
 import { calculateLineItem, calculateInvoiceTotals, validateDiscount } from '../utils/calculations';
 
 const CreateInvoiceScreen = ({ navigation }: any) => {
+  const { theme, themeMode } = useTheme();
+  const styles = getStyles(theme);
   // Product & Items
   const [products, setProducts] = useState<Product[]>([]);
   const [invoiceItems, setInvoiceItems] = useState<InvoiceItem[]>([]);
@@ -260,7 +263,8 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
 
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.scrollView}>
+      <StatusBar style={themeMode === 'dark' ? 'light' : 'dark'} />
+    <ScrollView style={styles.scrollView}>
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Outlet Details</Text>
@@ -354,6 +358,7 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
                     value={item.actualQuantity.toString()}
                     onChangeText={(val) => updateQuantity(item.id, 'actualQuantity', val)}
                     keyboardType="decimal-pad"
+                    placeholderTextColor={theme.text.light}
                   />
                 </View>
                 <View style={styles.inputGroupSmall}>
@@ -363,6 +368,7 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
                     value={item.billedQuantity.toString()}
                     onChangeText={(val) => updateQuantity(item.id, 'billedQuantity', val)}
                     keyboardType="decimal-pad"
+                    placeholderTextColor={theme.text.light}
                   />
                 </View>
                 <View style={styles.inputGroupLarge}>
@@ -373,6 +379,7 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
                     onChangeText={(val) => updateUnitPrice(item.id, val)}
                     keyboardType="decimal-pad"
                     placeholder="0"
+                    placeholderTextColor={theme.text.light}
                   />
                 </View>
               </View>
@@ -445,6 +452,7 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
                   value={discountValue}
                   onChangeText={setDiscountValue}
                   placeholder={discountType === 'flat' ? 'Enter amount' : 'Enter percentage'}
+                  placeholderTextColor={theme.text.light}
                   keyboardType="decimal-pad"
                 />
               )}
@@ -456,7 +464,7 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
                 <Text style={styles.summaryLabel}>
                   Discount ({discountType === 'flat' ? `₹${discountValue}` : `${discountValue}%`}):
                 </Text>
-                <Text style={[styles.summaryValue, { color: '#ef4444' }]}>-₹{totals.discountAmount}</Text>
+                <Text style={[styles.summaryValue, { color: theme.error }]}>-₹{totals.discountAmount}</Text>
               </View>
             )}
 
@@ -487,8 +495,8 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
               <Switch
                 value={enableRoundOff}
                 onValueChange={setEnableRoundOff}
-                trackColor={{ false: '#E0E0E0', true: COLORS.primary }}
-                thumbColor={enableRoundOff ? '#fff' : '#f4f3f4'}
+                trackColor={{ false: theme.border, true: theme.primary }}
+                thumbColor={enableRoundOff ? theme.text.inverse : theme.border}
               />
             </View>
 
@@ -496,7 +504,7 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
             {enableRoundOff && totals.roundOff !== 0 && (
               <View style={styles.summaryRow}>
                 <Text style={styles.summaryLabel}>Round Off:</Text>
-                <Text style={[styles.summaryValue, { color: totals.roundOff > 0 ? '#16a34a' : '#ef4444' }]}>
+                <Text style={[styles.summaryValue, { color: totals.roundOff > 0 ? theme.success : theme.error }]}>
                   {totals.roundOff > 0 ? '+' : ''}₹{totals.roundOff}
                 </Text>
               </View>
@@ -604,10 +612,10 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: theme.background,
   },
   scrollView: {
     flex: 1,
@@ -631,45 +639,45 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   selectProductButton: {
-    backgroundColor: COLORS.primary || '#007AFF',
+    backgroundColor: theme.primary,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
   },
   selectProductText: {
-    color: '#fff',
+    color: theme.text.inverse,
     fontSize: 12,
     fontWeight: '600',
   },
   selectOutletButton: {
-    backgroundColor: COLORS.primary || '#007AFF',
+    backgroundColor: theme.primary,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
   },
   selectOutletText: {
-    color: '#fff',
+    color: theme.text.inverse,
     fontSize: 12,
     fontWeight: '600',
   },
   addOutletButton: {
-    backgroundColor: '#16a34a',
+    backgroundColor: theme.success,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
   },
   addOutletText: {
-    color: '#fff',
+    color: theme.text.inverse,
     fontSize: 12,
     fontWeight: '600',
   },
   selectedOutletCard: {
-    backgroundColor: '#e3f2fd',
+    backgroundColor: theme.primary + '20',
     borderRadius: 8,
     padding: 12,
     marginBottom: 15,
     borderWidth: 1,
-    borderColor: COLORS.primary || '#007AFF',
+    borderColor: theme.primary,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
@@ -680,17 +688,17 @@ const styles = StyleSheet.create({
   selectedOutletName: {
     fontSize: 16,
     fontWeight: '600',
-    color: COLORS.text.primary,
+    color: theme.text.primary,
     marginBottom: 4,
   },
   selectedOutletAddress: {
     fontSize: 14,
-    color: COLORS.text.secondary,
+    color: theme.text.secondary,
     marginBottom: 4,
   },
   selectedOutletGst: {
     fontSize: 13,
-    color: COLORS.text.secondary,
+    color: theme.text.secondary,
     fontStyle: 'italic',
   },
   clearOutletButton: {
@@ -698,20 +706,20 @@ const styles = StyleSheet.create({
   },
   clearOutletText: {
     fontSize: 18,
-    color: '#ef4444',
+    color: theme.error,
     fontWeight: 'bold',
   },
   noOutletCard: {
-    backgroundColor: '#fef3c7',
+    backgroundColor: theme.warning + '40',
     borderRadius: 8,
     padding: 15,
     marginBottom: 15,
     borderWidth: 1,
-    borderColor: '#fbbf24',
+    borderColor: theme.warning,
   },
   noOutletText: {
     fontSize: 14,
-    color: '#92400e',
+    color: theme.text.primary,
     textAlign: 'center',
     fontStyle: 'italic',
   },
@@ -721,32 +729,32 @@ const styles = StyleSheet.create({
   },
   emptyModalText: {
     fontSize: 16,
-    color: COLORS.text.secondary,
+    color: theme.text.secondary,
     marginBottom: 15,
   },
   addInModalButton: {
-    backgroundColor: COLORS.primary || '#007AFF',
+    backgroundColor: theme.primary,
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 8,
   },
   addInModalText: {
-    color: '#fff',
+    color: theme.text.inverse,
     fontSize: 16,
     fontWeight: '600',
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: COLORS.text.primary,
+    color: theme.text.primary,
   },
   input: {
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: theme.border,
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     marginBottom: 10,
   },
   textArea: {
@@ -754,37 +762,37 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   addProductButton: {
-    backgroundColor: '#16a34a',
+    backgroundColor: theme.success,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
   },
   addProductText: {
-    color: '#fff',
+    color: theme.text.inverse,
     fontSize: 12,
     fontWeight: '600',
   },
   noProductCard: {
-    backgroundColor: '#fef3c7',
+    backgroundColor: theme.warning + '40',
     borderRadius: 8,
     padding: 15,
     marginBottom: 15,
     borderWidth: 1,
-    borderColor: '#fbbf24',
+    borderColor: theme.warning,
   },
   noProductText: {
     fontSize: 14,
-    color: '#92400e',
+    color: theme.text.primary,
     textAlign: 'center',
     fontStyle: 'italic',
   },
   itemCard: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 8,
     padding: 15,
     marginBottom: 15,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: theme.border,
   },
   itemHeader: {
     flexDirection: 'row',
@@ -795,15 +803,15 @@ const styles = StyleSheet.create({
   itemName: {
     fontSize: 16,
     fontWeight: '600',
-    color: COLORS.text.primary,
+    color: theme.text.primary,
   },
   removeText: {
     fontSize: 20,
-    color: '#ef4444',
+    color: theme.error,
   },
   itemDetail: {
     fontSize: 14,
-    color: COLORS.text.secondary,
+    color: theme.text.secondary,
     marginBottom: 15,
   },
   inputRow: {
@@ -820,19 +828,20 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: 12,
-    color: COLORS.text.secondary,
+    color: theme.text.secondary,
     marginBottom: 5,
   },
   smallInput: {
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: theme.border,
     borderRadius: 6,
     padding: 8,
     fontSize: 14,
-    backgroundColor: '#fff',
+    backgroundColor: theme.input.background,
+    color: theme.text.primary,
   },
   calculation: {
-    backgroundColor: '#f8fafc',
+    backgroundColor: theme.background,
     padding: 12,
     borderRadius: 6,
     marginTop: 10,
@@ -847,43 +856,43 @@ const styles = StyleSheet.create({
     marginTop: 4,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
+    borderTopColor: theme.border,
     marginBottom: 0,
   },
   calcLabel: {
     fontSize: 14,
-    color: COLORS.text.secondary,
+    color: theme.text.secondary,
     fontWeight: '500',
   },
   calcValue: {
     fontSize: 14,
-    color: COLORS.text.primary,
+    color: theme.text.primary,
     fontWeight: '600',
   },
   totalLabel: {
     fontSize: 16,
-    color: COLORS.text.primary,
+    color: theme.text.primary,
     fontWeight: '700',
   },
   totalValue: {
     fontSize: 16,
-    color: COLORS.text.primary,
+    color: theme.text.primary,
     fontWeight: '700',
   },
   emptyText: {
     textAlign: 'center',
-    color: COLORS.text.secondary,
+    color: theme.text.secondary,
     fontSize: 14,
     marginTop: 20,
   },
   summarySection: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     padding: 15,
     marginHorizontal: 15,
     marginBottom: 100,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: theme.border,
   },
   summaryRow: {
     flexDirection: 'row',
@@ -892,40 +901,40 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: 15,
-    color: COLORS.text.secondary,
+    color: theme.text.secondary,
   },
   summaryValue: {
     fontSize: 15,
     fontWeight: '600',
-    color: COLORS.text.primary,
+    color: theme.text.primary,
   },
   grandTotalRow: {
     borderTopWidth: 2,
-    borderTopColor: COLORS.border,
+    borderTopColor: theme.border,
     marginTop: 5,
     paddingTop: 12,
   },
   grandTotalLabel: {
     fontSize: 18,
     fontWeight: '700',
-    color: COLORS.text.primary,
+    color: theme.text.primary,
   },
   grandTotalValue: {
     fontSize: 18,
     fontWeight: '700',
-    color: COLORS.primary,
+    color: theme.primary,
   },
   generateButton: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: COLORS.primary,
+    backgroundColor: theme.primary,
     padding: 18,
     alignItems: 'center',
   },
   generateButtonText: {
-    color: '#fff',
+    color: theme.text.inverse,
     fontSize: 18,
     fontWeight: '700',
   },
@@ -935,7 +944,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
   },
   modalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     maxHeight: '70%',
@@ -950,31 +959,31 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: COLORS.text.primary,
+    color: theme.text.primary,
   },
   modalClose: {
     fontSize: 24,
-    color: COLORS.text.secondary,
+    color: theme.text.secondary,
   },
   productOption: {
     padding: 15,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: theme.border,
   },
   productOptionName: {
     fontSize: 16,
     fontWeight: '600',
-    color: COLORS.text.primary,
+    color: theme.text.primary,
     marginBottom: 5,
   },
   productOptionDetail: {
     fontSize: 14,
-    color: COLORS.text.secondary,
+    color: theme.text.secondary,
   },
   label: {
     fontSize: 13,
     fontWeight: '600',
-    color: COLORS.text.secondary,
+    color: theme.text.secondary,
     marginBottom: 5,
     marginTop: 10,
   },
@@ -982,13 +991,13 @@ const styles = StyleSheet.create({
     marginTop: 15,
     marginBottom: 15,
     padding: 15,
-    backgroundColor: '#f8fafc',
+    backgroundColor: theme.background,
     borderRadius: 8,
   },
   subSectionTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: COLORS.text.primary,
+    color: theme.text.primary,
     marginBottom: 10,
   },
   discountTypeRow: {
@@ -1002,29 +1011,30 @@ const styles = StyleSheet.create({
     marginHorizontal: 3,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: '#fff',
+    borderColor: theme.border,
+    backgroundColor: theme.surface,
     alignItems: 'center',
   },
   discountTypeButtonActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
+    backgroundColor: theme.primary,
+    borderColor: theme.primary,
   },
   discountTypeText: {
     fontSize: 13,
     fontWeight: '600',
-    color: COLORS.text.secondary,
+    color: theme.text.secondary,
   },
   discountTypeTextActive: {
-    color: '#fff',
+    color: theme.text.inverse,
   },
   discountInput: {
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: theme.border,
     borderRadius: 6,
     padding: 12,
     fontSize: 16,
-    backgroundColor: '#fff',
+    backgroundColor: theme.input.background,
+    color: theme.text.primary,
     marginTop: 5,
   },
   roundOffRow: {
@@ -1034,12 +1044,12 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: theme.border,
     marginVertical: 10,
   },
   roundOffHint: {
     fontSize: 11,
-    color: COLORS.text.secondary,
+    color: theme.text.secondary,
     marginTop: 2,
   },
 });

@@ -8,13 +8,16 @@ import {
   ScrollView,
   Alert,
 } from 'react-native';
-import { COLORS } from '../constants/colors';
+import { StatusBar } from 'expo-status-bar';
+import { useTheme } from '../contexts/ThemeContext';
 import { StorageService } from '../services/StorageService';
 
 const GST_RATES = [5, 12, 18, 28];
 const UNITS = ['Pcs', 'Kg', 'Ltr', 'Box'];
 
 const AddProductScreen = ({ navigation, route }: any) => {
+  const { theme, themeMode } = useTheme();
+  const styles = getStyles(theme);
   const [name, setName] = useState('');
   const [hsnCode, setHsnCode] = useState('');
   const [basePrice, setBasePrice] = useState('');
@@ -74,6 +77,7 @@ const AddProductScreen = ({ navigation, route }: any) => {
 
   return (
     <View style={styles.container}>
+      <StatusBar style={themeMode === 'dark' ? 'light' : 'dark'} />
       <ScrollView style={styles.form}>
         <Text style={styles.label}>Product Name *</Text>
         <TextInput
@@ -81,6 +85,7 @@ const AddProductScreen = ({ navigation, route }: any) => {
           value={name}
           onChangeText={setName}
           placeholder="Enter product name"
+          placeholderTextColor={theme.text.light}
         />
 
         <Text style={styles.label}>HSN Code *</Text>
@@ -89,6 +94,7 @@ const AddProductScreen = ({ navigation, route }: any) => {
           value={hsnCode}
           onChangeText={setHsnCode}
           placeholder="Enter HSN code"
+          placeholderTextColor={theme.text.light}
           keyboardType="numeric"
         />
 
@@ -98,6 +104,7 @@ const AddProductScreen = ({ navigation, route }: any) => {
           value={basePrice}
           onChangeText={handleBasePriceChange}
           placeholder="Enter base price"
+          placeholderTextColor={theme.text.light}
           keyboardType="decimal-pad"
         />
 
@@ -139,10 +146,10 @@ const AddProductScreen = ({ navigation, route }: any) => {
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: theme.background,
   },
   form: {
     padding: 20,
@@ -150,17 +157,18 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '600',
-    color: COLORS.text.primary,
+    color: theme.text.primary,
     marginBottom: 8,
     marginTop: 15,
   },
   input: {
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: theme.border,
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
-    backgroundColor: '#fff',
+    backgroundColor: theme.input.background,
+    color: theme.text.primary,
   },
   gstContainer: {
     flexDirection: 'row',
@@ -172,30 +180,30 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: '#fff',
+    borderColor: theme.border,
+    backgroundColor: theme.surface,
   },
   gstButtonActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
+    backgroundColor: theme.primary,
+    borderColor: theme.primary,
   },
   gstText: {
     fontSize: 14,
-    color: COLORS.text.primary,
+    color: theme.text.primary,
   },
   gstTextActive: {
-    color: '#fff',
+    color: theme.text.inverse,
     fontWeight: '600',
   },
   saveButton: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: theme.primary,
     padding: 15,
     borderRadius: 8,
     alignItems: 'center',
     marginTop: 30,
   },
   saveButtonText: {
-    color: '#fff',
+    color: theme.text.inverse,
     fontSize: 16,
     fontWeight: '600',
   },

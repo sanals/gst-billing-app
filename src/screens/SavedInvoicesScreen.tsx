@@ -11,8 +11,9 @@ import {
   Linking,
   Platform,
 } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { COLORS } from '../constants/colors';
+import { useTheme } from '../contexts/ThemeContext';
 import { PDFService } from '../services/PDFService';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as IntentLauncher from 'expo-intent-launcher';
@@ -30,6 +31,8 @@ interface SavedInvoice {
 }
 
 export default function SavedInvoicesScreen({ navigation }: SavedInvoicesScreenProps) {
+  const { theme, themeMode } = useTheme();
+  const styles = getStyles(theme);
   const [invoices, setInvoices] = useState<SavedInvoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -205,7 +208,7 @@ export default function SavedInvoicesScreen({ navigation }: SavedInvoicesScreenP
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
+        <ActivityIndicator size="large" color={theme.primary} />
         <Text style={styles.loadingText}>Loading saved invoices...</Text>
       </View>
     );
@@ -230,6 +233,7 @@ export default function SavedInvoicesScreen({ navigation }: SavedInvoicesScreenP
 
   return (
     <View style={styles.container}>
+      <StatusBar style={themeMode === 'dark' ? 'light' : 'dark'} />
       <FlatList
         data={invoices}
         keyExtractor={(item) => item.uri}
@@ -276,43 +280,43 @@ export default function SavedInvoicesScreen({ navigation }: SavedInvoicesScreenP
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: theme.background,
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: COLORS.background,
+    backgroundColor: theme.background,
   },
   loadingText: {
     marginTop: 10,
     fontSize: 16,
-    color: COLORS.text.secondary,
+    color: theme.text.secondary,
   },
   emptyText: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: COLORS.text.primary,
+    color: theme.text.primary,
     marginBottom: 10,
   },
   emptySubtext: {
     fontSize: 14,
-    color: COLORS.text.secondary,
+    color: theme.text.secondary,
     textAlign: 'center',
     marginBottom: 20,
   },
   refreshButton: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: theme.primary,
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 8,
   },
   refreshButtonText: {
-    color: '#fff',
+    color: theme.text.inverse,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -320,11 +324,11 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   invoiceCard: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
-    shadowColor: '#000',
+    shadowColor: theme.card.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -336,17 +340,17 @@ const styles = StyleSheet.create({
   invoiceName: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: COLORS.text.primary,
+    color: theme.text.primary,
     marginBottom: 4,
   },
   invoiceDate: {
     fontSize: 14,
-    color: COLORS.text.secondary,
+    color: theme.text.secondary,
     marginBottom: 2,
   },
   invoiceSize: {
     fontSize: 12,
-    color: COLORS.text.secondary,
+    color: theme.text.secondary,
   },
   actionButtons: {
     flexDirection: 'row',
@@ -360,16 +364,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   previewButton: {
-    backgroundColor: '#16a34a',
+    backgroundColor: theme.success,
   },
   shareButton: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: theme.primary,
   },
   deleteButton: {
-    backgroundColor: '#ef4444',
+    backgroundColor: theme.error,
   },
   actionButtonText: {
-    color: '#fff',
+    color: theme.text.inverse,
     fontSize: 14,
     fontWeight: '600',
   },

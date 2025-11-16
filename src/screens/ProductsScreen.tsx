@@ -7,12 +7,15 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { useFocusEffect } from '@react-navigation/native';
-import { COLORS } from '../constants/colors';
+import { useTheme } from '../contexts/ThemeContext';
 import { Product } from '../types/product';
 import { StorageService } from '../services/StorageService';
 
 const ProductsScreen = ({ navigation }: any) => {
+  const { theme, themeMode } = useTheme();
+  const styles = getStyles(theme);
   const [products, setProducts] = useState<Product[]>([]);
 
   const loadProducts = async () => {
@@ -63,6 +66,7 @@ const ProductsScreen = ({ navigation }: any) => {
 
   return (
     <View style={styles.container}>
+      <StatusBar style={themeMode === 'dark' ? 'light' : 'dark'} />
       <FlatList
         data={products}
         renderItem={renderProduct}
@@ -81,10 +85,10 @@ const ProductsScreen = ({ navigation }: any) => {
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: theme.background,
   },
   productCard: {
     flexDirection: 'row',
@@ -93,10 +97,10 @@ const styles = StyleSheet.create({
     padding: 15,
     marginHorizontal: 15,
     marginTop: 15,
-    backgroundColor: '#fff',
+    backgroundColor: theme.card.background,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: theme.border,
   },
   productInfo: {
     flex: 1,
@@ -104,45 +108,45 @@ const styles = StyleSheet.create({
   productName: {
     fontSize: 16,
     fontWeight: '600',
-    color: COLORS.text.primary,
+    color: theme.text.primary,
     marginBottom: 5,
   },
   productDetails: {
     fontSize: 14,
-    color: COLORS.text.secondary,
+    color: theme.text.secondary,
   },
   deleteButton: {
     paddingHorizontal: 15,
     paddingVertical: 8,
-    backgroundColor: '#ef4444',
+    backgroundColor: theme.error,
     borderRadius: 5,
   },
   deleteText: {
-    color: '#fff',
+    color: theme.text.inverse,
     fontWeight: '600',
   },
   emptyText: {
     textAlign: 'center',
     marginTop: 50,
     fontSize: 16,
-    color: COLORS.text.secondary,
+    color: theme.text.secondary,
   },
   addButton: {
     position: 'absolute',
     bottom: 20,
     right: 20,
-    backgroundColor: COLORS.primary,
+    backgroundColor: theme.primary,
     paddingHorizontal: 25,
     paddingVertical: 15,
     borderRadius: 25,
     elevation: 5,
-    shadowColor: '#000',
+    shadowColor: theme.card.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
   },
   addButtonText: {
-    color: '#fff',
+    color: theme.text.inverse,
     fontSize: 16,
     fontWeight: '600',
   },
