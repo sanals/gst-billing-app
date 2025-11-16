@@ -65,7 +65,7 @@ export class BackupService {
         `${FileSystem.documentDirectory}invoices/`
       ).catch(() => []);
       
-      const products = await AsyncStorage.getItem('products').then(
+      const products = await AsyncStorage.getItem('@products').then(
         (data) => data ? JSON.parse(data).length : 0
       ).catch(() => 0);
 
@@ -295,20 +295,20 @@ export class BackupService {
       const result = await GoogleDriveService.uploadBackup(accessToken, backupData);
 
       if (result.success) {
-        // Update metadata
-        const metadata = await this.getBackupStatus();
-        const updatedMetadata: BackupMetadata = {
-          ...(metadata || {
-            backupVersion: Date.now(),
-            totalInvoices: 0,
-            totalProducts: 0,
-          }),
-          lastBackupDate: new Date().toISOString(),
-          lastSyncDate: new Date().toISOString(),
-          backupMethod: 'google_drive',
-        };
+        // Update metadata with accurate counts
+        await this.updateBackupMetadata();
         
-        await AsyncStorage.setItem(BACKUP_DATA_KEY, JSON.stringify(updatedMetadata));
+        // Then update with sync-specific info
+        const metadata = await this.getBackupStatus();
+        if (metadata) {
+          const updatedMetadata: BackupMetadata = {
+            ...metadata,
+            lastBackupDate: new Date().toISOString(),
+            lastSyncDate: new Date().toISOString(),
+            backupMethod: 'google_drive',
+          };
+          await AsyncStorage.setItem(BACKUP_DATA_KEY, JSON.stringify(updatedMetadata));
+        }
       }
 
       return result;

@@ -35,7 +35,17 @@ export class GoogleDriveService {
       });
 
       if (!searchResponse.ok) {
-        throw new Error(`Failed to search folder: ${searchResponse.statusText}`);
+        const errorText = await searchResponse.text();
+        let errorMessage = `Failed to search folder: ${searchResponse.status} ${searchResponse.statusText}`;
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.error?.message || errorMessage;
+        } catch {
+          if (errorText) {
+            errorMessage += ` - ${errorText}`;
+          }
+        }
+        throw new Error(errorMessage);
       }
 
       const searchData = await searchResponse.json();
@@ -59,7 +69,17 @@ export class GoogleDriveService {
       });
 
       if (!createResponse.ok) {
-        throw new Error(`Failed to create folder: ${createResponse.statusText}`);
+        const errorText = await createResponse.text();
+        let errorMessage = `Failed to create folder: ${createResponse.status} ${createResponse.statusText}`;
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.error?.message || errorMessage;
+        } catch {
+          if (errorText) {
+            errorMessage += ` - ${errorText}`;
+          }
+        }
+        throw new Error(errorMessage);
       }
 
       const createData = await createResponse.json();
@@ -97,11 +117,28 @@ export class GoogleDriveService {
       const delimiter = `\r\n--${boundary}\r\n`;
       const closeDelimiter = `\r\n--${boundary}--`;
 
-      const metadata = {
-        name: BACKUP_FILE_NAME,
-        mimeType: 'application/json',
-        parents: [folderId],
-      };
+      let url: string;
+      let method: string;
+      let metadata: any;
+
+      if (existingFileId) {
+        // Update existing file - use addParents/removeParents instead of parents
+        url = `${DRIVE_UPLOAD_BASE}/files/${existingFileId}?uploadType=multipart`;
+        method = 'PATCH';
+        metadata = {
+          name: BACKUP_FILE_NAME,
+          mimeType: 'application/json',
+        };
+      } else {
+        // Create new file - can use parents
+        url = `${DRIVE_UPLOAD_BASE}/files?uploadType=multipart`;
+        method = 'POST';
+        metadata = {
+          name: BACKUP_FILE_NAME,
+          mimeType: 'application/json',
+          parents: [folderId],
+        };
+      }
 
       const multipartRequestBody =
         delimiter +
@@ -111,19 +148,6 @@ export class GoogleDriveService {
         'Content-Type: application/json\r\n\r\n' +
         backupJson +
         closeDelimiter;
-
-      let url: string;
-      let method: string;
-
-      if (existingFileId) {
-        // Update existing file
-        url = `${DRIVE_UPLOAD_BASE}/files/${existingFileId}?uploadType=multipart`;
-        method = 'PATCH';
-      } else {
-        // Create new file
-        url = `${DRIVE_UPLOAD_BASE}/files?uploadType=multipart`;
-        method = 'POST';
-      }
 
       const uploadResponse = await fetch(url, {
         method,
@@ -135,7 +159,18 @@ export class GoogleDriveService {
       });
 
       if (!uploadResponse.ok) {
-        throw new Error(`Upload failed: ${uploadResponse.statusText}`);
+        const errorText = await uploadResponse.text();
+        let errorMessage = `Upload failed: ${uploadResponse.status} ${uploadResponse.statusText}`;
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.error?.message || errorMessage;
+        } catch {
+          // If not JSON, use the text
+          if (errorText) {
+            errorMessage += ` - ${errorText}`;
+          }
+        }
+        throw new Error(errorMessage);
       }
 
       const uploadData = await uploadResponse.json();

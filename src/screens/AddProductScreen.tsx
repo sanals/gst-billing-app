@@ -39,7 +39,6 @@ const AddProductScreen = ({ navigation, route }: any) => {
     try {
       await StorageService.addProduct(product);
       Alert.alert('Success', 'Product added successfully');
-      route.params?.onProductAdded?.();
       navigation.goBack();
     } catch (error) {
       Alert.alert('Error', 'Failed to save product');

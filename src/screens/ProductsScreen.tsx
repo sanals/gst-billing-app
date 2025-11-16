@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { COLORS } from '../constants/colors';
 import { Product } from '../types/product';
 import { StorageService } from '../services/StorageService';
@@ -14,14 +15,17 @@ import { StorageService } from '../services/StorageService';
 const ProductsScreen = ({ navigation }: any) => {
   const [products, setProducts] = useState<Product[]>([]);
 
-  useEffect(() => {
-    loadProducts();
-  }, []);
-
   const loadProducts = async () => {
     const data = await StorageService.getProducts();
     setProducts(data);
   };
+
+  // Reload products when screen comes into focus (e.g., after adding a product)
+  useFocusEffect(
+    useCallback(() => {
+      loadProducts();
+    }, [])
+  );
 
   const handleDelete = (productId: string) => {
     Alert.alert(
@@ -69,7 +73,7 @@ const ProductsScreen = ({ navigation }: any) => {
       />
       <TouchableOpacity
         style={styles.addButton}
-        onPress={() => navigation.navigate('AddProduct', { onProductAdded: loadProducts })}
+        onPress={() => navigation.navigate('AddProduct')}
       >
         <Text style={styles.addButtonText}>+ Add Product</Text>
       </TouchableOpacity>
