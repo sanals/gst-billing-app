@@ -56,6 +56,13 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
 
         <TouchableOpacity 
           style={styles.buttonSecondary}
+          onPress={() => navigation.navigate('SavedInvoices')}
+        >
+          <Text style={styles.buttonSecondaryText}>Saved Invoices</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.buttonSecondary}
           onPress={() => navigation.navigate('Details')}
         >
           <Text style={styles.buttonSecondaryText}>View Details</Text>

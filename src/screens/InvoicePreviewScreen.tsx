@@ -48,15 +48,22 @@ const InvoicePreviewScreen = ({ route, navigation }: any) => {
       
       Alert.alert(
         'Success',
-        `Invoice ${invoice.fullInvoiceNumber} generated successfully!`,
+        `Invoice ${invoice.fullInvoiceNumber} has been saved and generated successfully!`,
         [
-          { text: 'OK', onPress: () => navigation.popToTop() },
           {
             text: 'Share',
             onPress: async () => {
-              await PDFService.sharePDF(filePath);
-              navigation.popToTop();
+              try {
+                await PDFService.sharePDF(filePath);
+              } catch (error) {
+                Alert.alert('Error', 'Failed to share invoice');
+              }
             },
+          },
+          {
+            text: 'Done',
+            onPress: () => navigation.popToTop(),
+            style: 'cancel',
           },
         ]
       );
@@ -227,7 +234,7 @@ const InvoicePreviewScreen = ({ route, navigation }: any) => {
         {generating ? (
           <ActivityIndicator color="#fff" />
         ) : (
-          <Text style={styles.generateButtonText}>Generate PDF & Share</Text>
+          <Text style={styles.generateButtonText}>Save & Generate PDF</Text>
         )}
       </TouchableOpacity>
     </View>

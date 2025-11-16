@@ -1,5 +1,6 @@
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system/legacy';
 import { Invoice } from '../types/invoice';
 import { CompanySettings } from '../types/company';
 import { numberToWords } from '../utils/numberToWords';
@@ -287,13 +288,108 @@ export class PDFService {
       });
       
       console.log('PDFService: PDF created successfully at:', uri);
-      return uri;
+      
+      // Save PDF to permanent storage
+      const savedPath = await PDFService.savePDF(uri, invoice.fullInvoiceNumber);
+      console.log('PDFService: PDF saved to permanent location:', savedPath);
+      
+      return savedPath;
     } catch (error) {
       console.error('PDFService: PDF Generation Error:', error);
       if (error instanceof Error) {
         console.error('PDFService: Error message:', error.message);
         console.error('PDFService: Error stack:', error.stack);
       }
+      throw error;
+    }
+  }
+
+  /**
+   * Saves PDF to permanent storage in the app's document directory
+   * @param tempUri Temporary URI from expo-print
+   * @param invoiceNumber Invoice number for filename
+   * @returns Path to saved PDF file
+   */
+  static async savePDF(tempUri: string, invoiceNumber: string): Promise<string> {
+    try {
+      // Create invoices directory if it doesn't exist
+      const invoicesDir = `${FileSystem.documentDirectory}invoices/`;
+      const dirInfo = await FileSystem.getInfoAsync(invoicesDir);
+      
+      if (!dirInfo.exists) {
+        await FileSystem.makeDirectoryAsync(invoicesDir, { intermediates: true });
+        console.log('PDFService: Created invoices directory');
+      }
+
+      // Generate filename: InvoiceNumber_YYYY-MM-DD.pdf
+      const date = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+      const fileName = `${invoiceNumber.replace(/[^a-zA-Z0-9]/g, '_')}_${date}.pdf`;
+      const savedPath = `${invoicesDir}${fileName}`;
+
+      // Copy from temp location to permanent location
+      await FileSystem.copyAsync({
+        from: tempUri,
+        to: savedPath,
+      });
+
+      console.log('PDFService: PDF saved successfully to:', savedPath);
+      return savedPath;
+    } catch (error) {
+      console.error('PDFService: Error saving PDF:', error);
+      // Return original temp URI if save fails
+      return tempUri;
+    }
+  }
+
+  /**
+   * Gets list of all saved invoices
+   * @returns Array of file info objects
+   */
+  static async getSavedInvoices(): Promise<FileSystem.FileInfo[]> {
+    try {
+      const invoicesDir = `${FileSystem.documentDirectory}invoices/`;
+      const dirInfo = await FileSystem.getInfoAsync(invoicesDir);
+      
+      if (!dirInfo.exists) {
+        return [];
+      }
+
+      const files = await FileSystem.readDirectoryAsync(invoicesDir);
+      const fileInfos = await Promise.all(
+        files.map(async (file) => {
+          const filePath = `${invoicesDir}${file}`;
+          const info = await FileSystem.getInfoAsync(filePath);
+          return info;
+        })
+      );
+
+      // Filter out directories and return only files, sorted by modification time (newest first)
+      return fileInfos
+        .filter((info) => info.exists && !info.isDirectory)
+        .sort((a, b) => {
+          const aTime = a.modificationTime || 0;
+          const bTime = b.modificationTime || 0;
+          return bTime - aTime; // Newest first
+        });
+    } catch (error) {
+      console.error('PDFService: Error getting saved invoices:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Deletes a saved invoice PDF
+   * @param filePath Path to the PDF file
+   */
+  static async deletePDF(filePath: string): Promise<void> {
+    try {
+      const fileInfo = await FileSystem.getInfoAsync(filePath);
+      if (fileInfo.exists) {
+        await FileSystem.deleteAsync(filePath, { idempotent: true });
+        console.log('PDFService: PDF deleted:', filePath);
+      }
+    } catch (error) {
+      console.error('PDFService: Error deleting PDF:', error);
       throw error;
     }
   }
