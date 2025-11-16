@@ -9,14 +9,21 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
+import { GoogleDriveService } from './GoogleDriveService';
 
 const BACKUP_DATA_KEY = 'backup_metadata';
+const BACKUP_METHOD_KEY = 'backup_method';
+const AUTO_SYNC_ENABLED_KEY = 'auto_sync_enabled';
+
+export type BackupMethod = 'manual' | 'google_drive';
 
 export interface BackupMetadata {
   lastBackupDate: string;
   backupVersion: number;
   totalInvoices: number;
   totalProducts: number;
+  backupMethod: BackupMethod;
+  lastSyncDate?: string;
 }
 
 export class BackupService {
@@ -203,6 +210,159 @@ export class BackupService {
       return {
         success: false,
         message: `Failed to restore: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      };
+    }
+  }
+
+  /**
+   * Get current backup method
+   */
+  static async getBackupMethod(): Promise<BackupMethod> {
+    try {
+      const method = await AsyncStorage.getItem(BACKUP_METHOD_KEY);
+      return (method as BackupMethod) || 'manual';
+    } catch (error) {
+      console.error('Error getting backup method:', error);
+      return 'manual';
+    }
+  }
+
+  /**
+   * Set backup method
+   */
+  static async setBackupMethod(method: BackupMethod): Promise<void> {
+    try {
+      await AsyncStorage.setItem(BACKUP_METHOD_KEY, method);
+      console.log(`Backup method set to: ${method}`);
+    } catch (error) {
+      console.error('Error setting backup method:', error);
+    }
+  }
+
+  /**
+   * Check if auto-sync is enabled
+   */
+  static async isAutoSyncEnabled(): Promise<boolean> {
+    try {
+      const enabled = await AsyncStorage.getItem(AUTO_SYNC_ENABLED_KEY);
+      return enabled === 'true';
+    } catch (error) {
+      console.error('Error checking auto-sync:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Set auto-sync enabled/disabled
+   */
+  static async setAutoSyncEnabled(enabled: boolean): Promise<void> {
+    try {
+      await AsyncStorage.setItem(AUTO_SYNC_ENABLED_KEY, enabled.toString());
+      console.log(`Auto-sync ${enabled ? 'enabled' : 'disabled'}`);
+    } catch (error) {
+      console.error('Error setting auto-sync:', error);
+    }
+  }
+
+  /**
+   * Sync to Google Drive (called automatically when auto-sync is enabled)
+   */
+  static async syncToGoogleDrive(accessToken: string): Promise<{ success: boolean; message: string }> {
+    try {
+      // Get all data to backup
+      const products = await AsyncStorage.getItem('products').then(
+        (data) => data ? JSON.parse(data) : []
+      ).catch(() => []);
+
+      const companySettings = await AsyncStorage.getItem('company_settings').then(
+        (data) => data ? JSON.parse(data) : null
+      ).catch(() => null);
+
+      const invoiceCounter = await AsyncStorage.getItem('invoice_counter_KTMVS').then(
+        (data) => data || '0'
+      ).catch(() => '0');
+
+      // Create backup data object
+      const backupData = {
+        version: '1.0',
+        exportDate: new Date().toISOString(),
+        products,
+        companySettings,
+        invoiceCounter: parseInt(invoiceCounter, 10),
+      };
+
+      // Upload to Google Drive
+      const result = await GoogleDriveService.uploadBackup(accessToken, backupData);
+
+      if (result.success) {
+        // Update metadata
+        const metadata = await this.getBackupStatus();
+        const updatedMetadata: BackupMetadata = {
+          ...(metadata || {
+            backupVersion: Date.now(),
+            totalInvoices: 0,
+            totalProducts: 0,
+          }),
+          lastBackupDate: new Date().toISOString(),
+          lastSyncDate: new Date().toISOString(),
+          backupMethod: 'google_drive',
+        };
+        
+        await AsyncStorage.setItem(BACKUP_DATA_KEY, JSON.stringify(updatedMetadata));
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Error syncing to Google Drive:', error);
+      return {
+        success: false,
+        message: `Sync failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      };
+    }
+  }
+
+  /**
+   * Restore from Google Drive
+   */
+  static async restoreFromGoogleDrive(accessToken: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const downloadResult = await GoogleDriveService.downloadBackup(accessToken);
+
+      if (!downloadResult.success || !downloadResult.data) {
+        return {
+          success: false,
+          message: downloadResult.message,
+        };
+      }
+
+      const backupData = downloadResult.data;
+
+      // Restore products
+      if (backupData.products) {
+        await AsyncStorage.setItem('products', JSON.stringify(backupData.products));
+      }
+
+      // Restore company settings
+      if (backupData.companySettings) {
+        await AsyncStorage.setItem('company_settings', JSON.stringify(backupData.companySettings));
+      }
+
+      // Restore invoice counter
+      if (backupData.invoiceCounter) {
+        await AsyncStorage.setItem('invoice_counter_KTMVS', backupData.invoiceCounter.toString());
+      }
+
+      await this.updateBackupMetadata();
+
+      return {
+        success: true,
+        message: 'Data restored successfully from Google Drive!',
+      };
+    } catch (error) {
+      console.error('Error restoring from Google Drive:', error);
+      return {
+        success: false,
+        message: `Restore failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
       };
     }
   }
