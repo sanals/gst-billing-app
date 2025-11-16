@@ -12,6 +12,8 @@ import CreateInvoiceScreen from '../screens/CreateInvoiceScreen';
 import InvoicePreviewScreen from '../screens/InvoicePreviewScreen';
 import CompanySettingsScreen from '../screens/CompanySettingsScreen';
 import SavedInvoicesScreen from '../screens/SavedInvoicesScreen';
+import OutletsScreen from '../screens/OutletsScreen';
+import AddOutletScreen from '../screens/AddOutletScreen';
 
 export type RootStackParamList = {
   Home: undefined;
@@ -23,6 +25,8 @@ export type RootStackParamList = {
   InvoicePreview: { invoice: any };
   CompanySettings: undefined;
   SavedInvoices: undefined;
+  Outlets: undefined;
+  AddOutlet: { outlet?: any };
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -86,6 +90,16 @@ export default function AppNavigator() {
           name="SavedInvoices" 
           component={SavedInvoicesScreen}
           options={{ title: 'Saved Invoices' }}
+        />
+        <Stack.Screen 
+          name="Outlets" 
+          component={OutletsScreen}
+          options={{ title: 'Manage Outlets' }}
+        />
+        <Stack.Screen 
+          name="AddOutlet" 
+          component={AddOutletScreen}
+          options={{ title: 'Add Outlet' }}
         />
       </Stack.Navigator>
     </NavigationContainer>

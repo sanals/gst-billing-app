@@ -48,6 +48,13 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
         </TouchableOpacity>
 
         <TouchableOpacity 
+          style={styles.button}
+          onPress={() => navigation.navigate('Outlets')}
+        >
+          <Text style={styles.buttonText}>Manage Outlets</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
           style={styles.buttonSecondary}
           onPress={() => navigation.navigate('CompanySettings')}
         >

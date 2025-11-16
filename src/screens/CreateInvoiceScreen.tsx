@@ -10,6 +10,7 @@ import {
   Modal,
   Switch,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { COLORS } from '../constants/colors';
 import { Product } from '../types/product';
 import { InvoiceItem } from '../types/invoice';
@@ -17,6 +18,8 @@ import { CompanySettings } from '../types/company';
 import { StorageService } from '../services/StorageService';
 import { CompanySettingsService } from '../services/CompanySettingsService';
 import { InvoiceCounterService } from '../services/InvoiceCounterService';
+import { OutletService } from '../services/OutletService';
+import { Outlet } from '../types/outlet';
 import { calculateLineItem, calculateInvoiceTotals, validateDiscount } from '../utils/calculations';
 
 const CreateInvoiceScreen = ({ navigation }: any) => {
@@ -25,9 +28,10 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
   const [invoiceItems, setInvoiceItems] = useState<InvoiceItem[]>([]);
   
   // Customer Details
-  const [outletName, setOutletName] = useState('');
-  const [outletAddress, setOutletAddress] = useState('');
-  const [customerGSTNo, setCustomerGSTNo] = useState('');
+  const [selectedOutlet, setSelectedOutlet] = useState<Outlet | null>(null);
+  
+  // Outlets
+  const [outlets, setOutlets] = useState<Outlet[]>([]);
   
   // Discount
   const [discountType, setDiscountType] = useState<'none' | 'flat' | 'percent'>('none');
@@ -41,11 +45,24 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
   
   // UI
   const [showProductPicker, setShowProductPicker] = useState(false);
+  const [showOutletPicker, setShowOutletPicker] = useState(false);
 
   useEffect(() => {
     loadProducts();
     loadCompanySettings();
+    loadOutlets();
   }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      loadOutlets();
+    }, [])
+  );
+
+  const loadOutlets = async () => {
+    const data = await OutletService.getOutlets();
+    setOutlets(data);
+  };
 
   const loadProducts = async () => {
     const data = await StorageService.getProducts();
@@ -105,10 +122,19 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
     setInvoiceItems(items => items.filter(item => item.id !== itemId));
   };
 
+  const selectOutlet = (outlet: Outlet) => {
+    setSelectedOutlet(outlet);
+    setShowOutletPicker(false);
+  };
+
+  const clearOutlet = () => {
+    setSelectedOutlet(null);
+  };
+
   const handleGenerateInvoice = async () => {
     // Validation
-    if (!outletName.trim()) {
-      Alert.alert('Error', 'Please enter outlet name');
+    if (!selectedOutlet) {
+      Alert.alert('Error', 'Please select an outlet');
       return;
     }
     if (invoiceItems.length === 0) {
@@ -154,9 +180,9 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
         invoicePrefix,
         fullInvoiceNumber: fullNumber,
         date: new Date().toLocaleDateString(),
-        outletName,
-        outletAddress,
-        customerGSTNo: customerGSTNo.trim() || undefined,
+        outletName: selectedOutlet.name,
+        outletAddress: selectedOutlet.address,
+        customerGSTNo: selectedOutlet.gstNo || undefined,
         state: companySettings?.state || 'Kerala',
         stateCode: companySettings?.stateCode || '22',
         items: invoiceItems,
@@ -178,31 +204,49 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
     <View style={styles.container}>
       <ScrollView style={styles.scrollView}>
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Outlet Details</Text>
-          <TextInput
-            style={styles.input}
-            value={outletName}
-            onChangeText={setOutletName}
-            placeholder="Outlet Name *"
-          />
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            value={outletAddress}
-            onChangeText={setOutletAddress}
-            placeholder="Outlet Address (Optional)"
-            multiline
-            numberOfLines={2}
-          />
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Outlet Details</Text>
+            <View style={styles.outletActions}>
+              {outlets.length > 0 && (
+                <TouchableOpacity
+                  style={styles.selectOutletButton}
+                  onPress={() => setShowOutletPicker(true)}
+                >
+                  <Text style={styles.selectOutletText}>
+                    {selectedOutlet ? 'Change' : 'Select'} Outlet
+                  </Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                style={styles.addOutletButton}
+                onPress={() => navigation.navigate('AddOutlet')}
+              >
+                <Text style={styles.addOutletText}>+ Add</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
 
-          <Text style={styles.label}>Customer GST NO (Optional for B2C)</Text>
-          <TextInput
-            style={styles.input}
-            value={customerGSTNo}
-            onChangeText={(text) => setCustomerGSTNo(text.toUpperCase())}
-            placeholder="22AAUPJ7SS1B12M"
-            autoCapitalize="characters"
-            maxLength={15}
-          />
+          {selectedOutlet ? (
+            <View style={styles.selectedOutletCard}>
+              <View style={styles.selectedOutletInfo}>
+                <Text style={styles.selectedOutletName}>{selectedOutlet.name}</Text>
+                <Text style={styles.selectedOutletAddress}>{selectedOutlet.address}</Text>
+                {selectedOutlet.gstNo && (
+                  <Text style={styles.selectedOutletGst}>GST: {selectedOutlet.gstNo}</Text>
+                )}
+              </View>
+              <TouchableOpacity
+                style={styles.clearOutletButton}
+                onPress={clearOutlet}
+              >
+                <Text style={styles.clearOutletText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.noOutletCard}>
+              <Text style={styles.noOutletText}>Please select an outlet to continue</Text>
+            </View>
+          )}
         </View>
 
         <View style={styles.section}>
@@ -426,6 +470,48 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
           </View>
         </View>
       </Modal>
+
+      <Modal visible={showOutletPicker} animationType="slide" transparent>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Outlet</Text>
+              <TouchableOpacity onPress={() => setShowOutletPicker(false)}>
+                <Text style={styles.modalClose}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView>
+              {outlets.map((outlet) => (
+                <TouchableOpacity
+                  key={outlet.id}
+                  style={styles.productOption}
+                  onPress={() => selectOutlet(outlet)}
+                >
+                  <Text style={styles.productOptionName}>{outlet.name}</Text>
+                  <Text style={styles.productOptionDetail}>{outlet.address}</Text>
+                  {outlet.gstNo && (
+                    <Text style={styles.productOptionDetail}>GST: {outlet.gstNo}</Text>
+                  )}
+                </TouchableOpacity>
+              ))}
+              {outlets.length === 0 && (
+                <View style={styles.emptyModalContent}>
+                  <Text style={styles.emptyModalText}>No outlets added yet</Text>
+                  <TouchableOpacity
+                    style={styles.addInModalButton}
+                    onPress={() => {
+                      setShowOutletPicker(false);
+                      navigation.navigate('AddOutlet');
+                    }}
+                  >
+                    <Text style={styles.addInModalText}>+ Add Outlet</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -447,6 +533,104 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 15,
+  },
+  outletActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  selectOutletButton: {
+    backgroundColor: COLORS.primary || '#007AFF',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  selectOutletText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  addOutletButton: {
+    backgroundColor: '#16a34a',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  addOutletText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  selectedOutletCard: {
+    backgroundColor: '#e3f2fd',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: COLORS.primary || '#007AFF',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  selectedOutletInfo: {
+    flex: 1,
+  },
+  selectedOutletName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.text.primary,
+    marginBottom: 4,
+  },
+  selectedOutletAddress: {
+    fontSize: 14,
+    color: COLORS.text.secondary,
+    marginBottom: 4,
+  },
+  selectedOutletGst: {
+    fontSize: 13,
+    color: COLORS.text.secondary,
+    fontStyle: 'italic',
+  },
+  clearOutletButton: {
+    padding: 4,
+  },
+  clearOutletText: {
+    fontSize: 18,
+    color: '#ef4444',
+    fontWeight: 'bold',
+  },
+  noOutletCard: {
+    backgroundColor: '#fef3c7',
+    borderRadius: 8,
+    padding: 15,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#fbbf24',
+  },
+  noOutletText: {
+    fontSize: 14,
+    color: '#92400e',
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  emptyModalContent: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  emptyModalText: {
+    fontSize: 16,
+    color: COLORS.text.secondary,
+    marginBottom: 15,
+  },
+  addInModalButton: {
+    backgroundColor: COLORS.primary || '#007AFF',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  addInModalText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   sectionTitle: {
     fontSize: 18,
