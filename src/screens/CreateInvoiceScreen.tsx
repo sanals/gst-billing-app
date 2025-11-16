@@ -76,6 +76,13 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
   };
 
   const addProduct = (product: Product) => {
+    // Check if product already exists in invoice items
+    const productExists = invoiceItems.some(item => item.product.id === product.id);
+    if (productExists) {
+      Alert.alert('Product Already Added', 'This product is already in the invoice. Please remove it first if you want to add it again.');
+      return;
+    }
+
     const newItem: InvoiceItem = {
       id: Date.now().toString(),
       product,
@@ -92,7 +99,34 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
   };
 
   const updateQuantity = (itemId: string, field: 'actualQuantity' | 'billedQuantity', value: string) => {
-    const qty = parseFloat(value) || 0;
+    // Allow empty string for clearing, but validate when there's input
+    if (value === '' || value === '.') {
+      setInvoiceItems(items =>
+        items.map(item => {
+          if (item.id !== itemId) return item;
+          const updated = { ...item, [field]: 0 };
+          if (field === 'billedQuantity') {
+            const calculated = calculateLineItem(item.product, 0, item.unitPrice);
+            return { ...updated, ...calculated };
+          }
+          return updated;
+        })
+      );
+      return;
+    }
+
+    // Validate: only allow numbers and one decimal point
+    const numericRegex = /^[0-9]*\.?[0-9]*$/;
+    if (!numericRegex.test(value)) {
+      return; // Don't update if invalid
+    }
+
+    const qty = parseFloat(value);
+    // Prevent negative values
+    if (isNaN(qty) || qty < 0) {
+      return;
+    }
+
     setInvoiceItems(items =>
       items.map(item => {
         if (item.id !== itemId) return item;
@@ -108,7 +142,30 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
   };
 
   const updateUnitPrice = (itemId: string, value: string) => {
-    const price = parseFloat(value) || 0;
+    // Allow empty string for clearing, but validate when there's input
+    if (value === '' || value === '.') {
+      setInvoiceItems(items =>
+        items.map(item => {
+          if (item.id !== itemId) return item;
+          const calculated = calculateLineItem(item.product, item.billedQuantity, 0);
+          return { ...item, unitPrice: 0, ...calculated };
+        })
+      );
+      return;
+    }
+
+    // Validate: only allow numbers and one decimal point
+    const numericRegex = /^[0-9]*\.?[0-9]*$/;
+    if (!numericRegex.test(value)) {
+      return; // Don't update if invalid
+    }
+
+    const price = parseFloat(value);
+    // Prevent negative values
+    if (isNaN(price) || price < 0) {
+      return;
+    }
+
     setInvoiceItems(items =>
       items.map(item => {
         if (item.id !== itemId) return item;

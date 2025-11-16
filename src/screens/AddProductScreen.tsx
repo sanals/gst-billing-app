@@ -21,9 +21,36 @@ const AddProductScreen = ({ navigation, route }: any) => {
   const [gstRate, setGstRate] = useState(18);
   const [unit, setUnit] = useState('Pcs');
 
+  const handleBasePriceChange = (value: string) => {
+    // Allow empty string for clearing
+    if (value === '' || value === '.') {
+      setBasePrice(value);
+      return;
+    }
+
+    // Validate: only allow numbers and one decimal point
+    const numericRegex = /^[0-9]*\.?[0-9]*$/;
+    if (!numericRegex.test(value)) {
+      return; // Don't update if invalid
+    }
+
+    // Prevent negative values (check if starts with minus)
+    if (value.startsWith('-')) {
+      return;
+    }
+
+    setBasePrice(value);
+  };
+
   const handleSave = async () => {
     if (!name || !hsnCode || !basePrice) {
       Alert.alert('Error', 'Please fill all fields');
+      return;
+    }
+
+    const price = parseFloat(basePrice);
+    if (isNaN(price) || price < 0) {
+      Alert.alert('Error', 'Please enter a valid price');
       return;
     }
 
@@ -31,7 +58,7 @@ const AddProductScreen = ({ navigation, route }: any) => {
       id: Date.now().toString(),
       name,
       hsnCode,
-      basePrice: parseFloat(basePrice),
+      basePrice: price,
       gstRate,
       unit,
     };
@@ -69,7 +96,7 @@ const AddProductScreen = ({ navigation, route }: any) => {
         <TextInput
           style={styles.input}
           value={basePrice}
-          onChangeText={setBasePrice}
+          onChangeText={handleBasePriceChange}
           placeholder="Enter base price"
           keyboardType="decimal-pad"
         />
