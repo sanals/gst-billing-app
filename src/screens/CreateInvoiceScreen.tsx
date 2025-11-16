@@ -229,7 +229,7 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
               </Text>
 
               <View style={styles.inputRow}>
-                <View style={styles.inputGroup}>
+                <View style={styles.inputGroupSmall}>
                   <Text style={styles.inputLabel}>Actual Qty</Text>
                   <TextInput
                     style={styles.smallInput}
@@ -238,7 +238,7 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
                     keyboardType="decimal-pad"
                   />
                 </View>
-                <View style={styles.inputGroup}>
+                <View style={styles.inputGroupSmall}>
                   <Text style={styles.inputLabel}>Billed Qty *</Text>
                   <TextInput
                     style={styles.smallInput}
@@ -247,25 +247,36 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
                     keyboardType="decimal-pad"
                   />
                 </View>
-                <View style={styles.inputGroup}>
+                <View style={styles.inputGroupLarge}>
                   <Text style={styles.inputLabel}>Unit Price</Text>
                   <TextInput
                     style={styles.smallInput}
-                    value={item.unitPrice.toString()}
+                    value={item.unitPrice > 0 ? item.unitPrice.toString() : ''}
                     onChangeText={(val) => updateUnitPrice(item.id, val)}
                     keyboardType="decimal-pad"
+                    placeholder="0"
                   />
                 </View>
               </View>
 
               {item.billedQuantity > 0 && (
                 <View style={styles.calculation}>
-                  <Text style={styles.calcText}>Taxable: ₹{item.taxableAmount}</Text>
-                  <Text style={styles.calcText}>CGST: ₹{item.cgstAmount}</Text>
-                  <Text style={styles.calcText}>SGST: ₹{item.sgstAmount}</Text>
-                  <Text style={[styles.calcText, styles.totalText]}>
-                    Total: ₹{item.totalAmount}
-                  </Text>
+                  <View style={styles.calcRow}>
+                    <Text style={styles.calcLabel}>Taxable:</Text>
+                    <Text style={styles.calcValue}>₹{(item.taxableAmount || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</Text>
+                  </View>
+                  <View style={styles.calcRow}>
+                    <Text style={styles.calcLabel}>CGST:</Text>
+                    <Text style={styles.calcValue}>₹{(item.cgstAmount || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</Text>
+                  </View>
+                  <View style={styles.calcRow}>
+                    <Text style={styles.calcLabel}>SGST:</Text>
+                    <Text style={styles.calcValue}>₹{(item.sgstAmount || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</Text>
+                  </View>
+                  <View style={[styles.calcRow, styles.totalRow]}>
+                    <Text style={[styles.calcLabel, styles.totalLabel]}>Total:</Text>
+                    <Text style={[styles.calcValue, styles.totalValue]}>₹{(item.totalAmount || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</Text>
+                  </View>
                 </View>
               )}
             </View>
@@ -497,10 +508,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 10,
+    gap: 8,
   },
-  inputGroup: {
-    flex: 1,
-    marginRight: 10,
+  inputGroupSmall: {
+    flex: 0.7,
+  },
+  inputGroupLarge: {
+    flex: 1.6,
   },
   inputLabel: {
     fontSize: 12,
@@ -517,18 +531,42 @@ const styles = StyleSheet.create({
   },
   calculation: {
     backgroundColor: '#f8fafc',
-    padding: 10,
+    padding: 12,
     borderRadius: 6,
+    marginTop: 10,
+  },
+  calcRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
   },
-  calcText: {
-    fontSize: 13,
+  totalRow: {
+    marginTop: 4,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    marginBottom: 0,
+  },
+  calcLabel: {
+    fontSize: 14,
     color: COLORS.text.secondary,
+    fontWeight: '500',
   },
-  totalText: {
-    fontWeight: '700',
+  calcValue: {
+    fontSize: 14,
     color: COLORS.text.primary,
+    fontWeight: '600',
+  },
+  totalLabel: {
+    fontSize: 16,
+    color: COLORS.text.primary,
+    fontWeight: '700',
+  },
+  totalValue: {
+    fontSize: 16,
+    color: COLORS.text.primary,
+    fontWeight: '700',
   },
   emptyText: {
     textAlign: 'center',
