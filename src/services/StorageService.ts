@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Product } from '../types/product';
+import { BackupService } from './BackupService';
 
 const PRODUCTS_KEY = '@products';
 
@@ -7,6 +8,13 @@ export class StorageService {
   static async saveProducts(products: Product[]): Promise<void> {
     try {
       await AsyncStorage.setItem(PRODUCTS_KEY, JSON.stringify(products));
+      // Update backup metadata after saving products
+      try {
+        await BackupService.updateBackupMetadata();
+      } catch (error) {
+        console.log('Failed to update backup metadata:', error);
+        // Don't fail product save if backup metadata update fails
+      }
     } catch (error) {
       console.error('Save Products Error:', error);
       throw error;

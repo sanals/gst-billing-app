@@ -28,7 +28,11 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "backup": {
+        "enabled": true,
+        "includeSharedPreferences": true
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png"
