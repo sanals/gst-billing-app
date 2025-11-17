@@ -23,6 +23,7 @@ const AddProductScreen = ({ navigation, route }: any) => {
   const [basePrice, setBasePrice] = useState('');
   const [gstRate, setGstRate] = useState(18);
   const [unit, setUnit] = useState('Pcs');
+  const [stock, setStock] = useState('');
 
   const handleBasePriceChange = (value: string) => {
     // Allow empty string for clearing
@@ -45,6 +46,27 @@ const AddProductScreen = ({ navigation, route }: any) => {
     setBasePrice(value);
   };
 
+  const handleStockChange = (value: string) => {
+    // Allow empty string for clearing
+    if (value === '') {
+      setStock(value);
+      return;
+    }
+
+    // Validate: only allow whole numbers (no decimals for stock)
+    const numericRegex = /^[0-9]+$/;
+    if (!numericRegex.test(value)) {
+      return; // Don't update if invalid
+    }
+
+    // Prevent negative values
+    if (value.startsWith('-')) {
+      return;
+    }
+
+    setStock(value);
+  };
+
   const handleSave = async () => {
     if (!name || !hsnCode || !basePrice) {
       Alert.alert('Error', 'Please fill all fields');
@@ -64,6 +86,7 @@ const AddProductScreen = ({ navigation, route }: any) => {
       basePrice: price,
       gstRate,
       unit,
+      stock: stock ? parseInt(stock, 10) : undefined, // Only include stock if provided
     };
 
     try {
@@ -138,6 +161,19 @@ const AddProductScreen = ({ navigation, route }: any) => {
           ))}
         </View>
 
+        <Text style={styles.label}>Initial Stock (Optional)</Text>
+        <TextInput
+          style={styles.input}
+          value={stock}
+          onChangeText={handleStockChange}
+          placeholder="Enter initial stock quantity"
+          placeholderTextColor={theme.text.light}
+          keyboardType="number-pad"
+        />
+        <Text style={styles.hintText}>
+          Leave empty if you don't want to track stock for this product
+        </Text>
+
         <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
           <Text style={styles.saveButtonText}>Save Product</Text>
         </TouchableOpacity>
@@ -206,6 +242,12 @@ const getStyles = (theme: any) => StyleSheet.create({
     color: theme.text.inverse,
     fontSize: 16,
     fontWeight: '600',
+  },
+  hintText: {
+    fontSize: 12,
+    color: theme.text.secondary,
+    marginTop: 5,
+    fontStyle: 'italic',
   },
 });
 

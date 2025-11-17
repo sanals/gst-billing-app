@@ -22,6 +22,7 @@ import { InvoiceCounterService } from '../services/InvoiceCounterService';
 import { OutletService } from '../services/OutletService';
 import { Outlet } from '../types/outlet';
 import { calculateLineItem, calculateInvoiceTotals, validateDiscount } from '../utils/calculations';
+import { StockService } from '../services/StockService';
 
 const CreateInvoiceScreen = ({ navigation }: any) => {
   const { theme, themeMode } = useTheme();
@@ -207,6 +208,17 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
       return;
     }
 
+    // Validate stock availability
+    const stockValidation = await StockService.validateStockForInvoice(invoiceItems);
+    if (!stockValidation.valid) {
+      Alert.alert(
+        'Insufficient Stock',
+        stockValidation.message || 'Some products don\'t have enough stock',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
     // Validate discount
     const discountVal = parseFloat(discountValue) || 0;
     const tempTotals = calculateInvoiceTotals({
@@ -349,6 +361,28 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
               <Text style={styles.itemDetail}>
                 HSN: {item.product.hsnCode} | GST: {item.product.gstRate}%
               </Text>
+              
+              {item.product.stock !== undefined && (
+                <View style={styles.stockInfo}>
+                  <Text style={[
+                    styles.stockText,
+                    { 
+                      color: StockService.isOutOfStock(item.product.stock) 
+                        ? theme.error 
+                        : StockService.isLowStock(item.product.stock, 10)
+                        ? theme.warning || '#FF9800'
+                        : theme.text.secondary
+                    }
+                  ]}>
+                    Available Stock: {item.product.stock} {item.product.unit}
+                    {item.billedQuantity > item.product.stock && (
+                      <Text style={{ color: theme.error, fontWeight: '700' }}>
+                        {' '}(Insufficient!)
+                      </Text>
+                    )}
+                  </Text>
+                </View>
+              )}
 
               <View style={styles.inputRow}>
                 <View style={styles.inputGroupSmall}>
@@ -536,18 +570,47 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
               </TouchableOpacity>
             </View>
             <ScrollView>
-              {products.map((product) => (
-                <TouchableOpacity
-                  key={product.id}
-                  style={styles.productOption}
-                  onPress={() => addProduct(product)}
-                >
-                  <Text style={styles.productOptionName}>{product.name}</Text>
-                  <Text style={styles.productOptionDetail}>
-                    ₹{product.basePrice}/{product.unit} | GST: {product.gstRate}%
-                  </Text>
-                </TouchableOpacity>
-              ))}
+              {products.map((product) => {
+                const isOutOfStock = StockService.isOutOfStock(product.stock);
+                const isLowStock = StockService.isLowStock(product.stock, 10);
+                const stockColor = isOutOfStock 
+                  ? theme.error 
+                  : isLowStock 
+                  ? theme.warning || '#FF9800'
+                  : theme.success || '#4CAF50';
+
+                return (
+                  <TouchableOpacity
+                    key={product.id}
+                    style={[
+                      styles.productOption,
+                      isOutOfStock && styles.productOptionDisabled
+                    ]}
+                    onPress={() => {
+                      if (!isOutOfStock) {
+                        addProduct(product);
+                      } else {
+                        Alert.alert('Out of Stock', `${product.name} is currently out of stock.`);
+                      }
+                    }}
+                    disabled={isOutOfStock}
+                  >
+                    <View style={styles.productOptionContent}>
+                      <Text style={styles.productOptionName}>{product.name}</Text>
+                      <Text style={styles.productOptionDetail}>
+                        ₹{product.basePrice}/{product.unit} | GST: {product.gstRate}%
+                      </Text>
+                      {product.stock !== undefined && (
+                        <Text style={[styles.productStock, { color: stockColor }]}>
+                          Stock: {product.stock} {product.unit}
+                          {isOutOfStock && ' (Out of Stock)'}
+                          {!isOutOfStock && isLowStock && ' (Low Stock)'}
+                        </Text>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
               {products.length === 0 && (
                 <View style={styles.emptyModalContent}>
                   <Text style={styles.emptyModalText}>No products added yet</Text>
@@ -812,7 +875,14 @@ const getStyles = (theme: any) => StyleSheet.create({
   itemDetail: {
     fontSize: 14,
     color: theme.text.secondary,
-    marginBottom: 15,
+    marginBottom: 8,
+  },
+  stockInfo: {
+    marginBottom: 10,
+  },
+  stockText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
   inputRow: {
     flexDirection: 'row',
@@ -979,6 +1049,17 @@ const getStyles = (theme: any) => StyleSheet.create({
   productOptionDetail: {
     fontSize: 14,
     color: theme.text.secondary,
+  },
+  productOptionContent: {
+    flex: 1,
+  },
+  productStock: {
+    fontSize: 13,
+    fontWeight: '600',
+    marginTop: 5,
+  },
+  productOptionDisabled: {
+    opacity: 0.5,
   },
   label: {
     fontSize: 13,

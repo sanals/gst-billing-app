@@ -15,6 +15,7 @@ import { CompanySettings } from '../types/company';
 import { PDFService } from '../services/PDFService';
 import { CompanySettingsService } from '../services/CompanySettingsService';
 import { InvoiceCounterService } from '../services/InvoiceCounterService';
+import { StockService } from '../services/StockService';
 import { numberToWords } from '../utils/numberToWords';
 
 const InvoicePreviewScreen = ({ route, navigation }: any) => {
@@ -42,6 +43,15 @@ const InvoicePreviewScreen = ({ route, navigation }: any) => {
       const filePath = await PDFService.generateInvoicePDF(invoice, companySettings);
       
       console.log('PDF generated successfully at:', filePath);
+      
+      // Deduct stock for invoice items
+      try {
+        await StockService.deductStockForInvoice(invoice.items);
+        console.log('StockService: Stock deducted successfully');
+      } catch (error) {
+        console.error('StockService: Error deducting stock:', error);
+        // Don't fail invoice generation if stock deduction fails, but log it
+      }
       
       // Increment invoice counter after successful PDF generation
       await InvoiceCounterService.incrementCounter(invoice.invoicePrefix);

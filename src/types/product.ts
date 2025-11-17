@@ -5,5 +5,6 @@ export interface Product {
   basePrice: number;
   gstRate: number;
   unit: string;
+  stock?: number; // Optional for backward compatibility - stock quantity available
 }
 
