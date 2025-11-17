@@ -1,90 +1,22 @@
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
-import { Asset } from 'expo-asset';
 import { Invoice } from '../types/invoice';
 import { CompanySettings, DEFAULT_COMPANY_SETTINGS } from '../types/company';
 import { numberToWords } from '../utils/numberToWords';
 import { BackupService } from './BackupService';
+import { LOGO_BASE64, QRCODE_BASE64 } from '../constants/assets';
 
 export class PDFService {
-  /**
-   * Converts an image asset to base64 data URI for use in PDF
-   * @param imagePath Path to image in assets folder (e.g., require('../assets/logo.png'))
-   * @returns Base64 data URI string or empty string if image not found
-   */
-  static async getImageAsBase64(imagePath: number | string): Promise<string> {
-    try {
-      let asset;
-      if (typeof imagePath === 'number') {
-        // If it's a require() result (number), use Asset.fromModule
-        asset = Asset.fromModule(imagePath);
-      } else {
-        // If it's a string path, use Asset.fromURI
-        asset = Asset.fromURI(imagePath);
-      }
-      
-      await asset.downloadAsync();
-      
-      if (asset.localUri) {
-        const base64 = await FileSystem.readAsStringAsync(asset.localUri, {
-          encoding: FileSystem.EncodingType.Base64,
-        });
-        
-        // Determine MIME type from file extension
-        const uri = asset.localUri.toLowerCase();
-        let mimeType = 'image/png';
-        if (uri.endsWith('.jpg') || uri.endsWith('.jpeg')) {
-          mimeType = 'image/jpeg';
-        } else if (uri.endsWith('.png')) {
-          mimeType = 'image/png';
-        }
-        
-        return `data:${mimeType};base64,${base64}`;
-      }
-      
-      return '';
-    } catch (error) {
-      console.warn('PDFService: Could not load image:', error);
-      return '';
-    }
-  }
-
   static async generateInvoicePDF(invoice: Invoice, companySettings: CompanySettings | null = null): Promise<string> {
     console.log('PDFService: Starting invoice PDF generation');
     console.log('PDFService: Invoice has', invoice.items.length, 'items');
     
     const company = companySettings || DEFAULT_COMPANY_SETTINGS;
     
-    // Load logo and QR code images as base64
-    let logoBase64 = '';
-    let qrCodeBase64 = '';
-    
-    // Try to load logo from assets folder (try PNG first, then JPG)
-    try {
-      const logoAsset = require('../../assets/logo.png');
-      logoBase64 = await PDFService.getImageAsBase64(logoAsset);
-    } catch (error) {
-      try {
-        const logoAsset = require('../../assets/logo.jpg');
-        logoBase64 = await PDFService.getImageAsBase64(logoAsset);
-      } catch (error2) {
-        console.log('PDFService: Logo not found, continuing without logo');
-      }
-    }
-    
-    // Try to load QR code from assets folder (try PNG first, then JPG)
-    try {
-      const qrCodeAsset = require('../../assets/qrcode.png');
-      qrCodeBase64 = await PDFService.getImageAsBase64(qrCodeAsset);
-    } catch (error) {
-      try {
-        const qrCodeAsset = require('../../assets/qrcode.jpg');
-        qrCodeBase64 = await PDFService.getImageAsBase64(qrCodeAsset);
-      } catch (error2) {
-        console.log('PDFService: QR code not found, continuing without QR code');
-      }
-    }
+    // Use pre-embedded base64 images (generated from assets at build time)
+    const logoBase64 = LOGO_BASE64;
+    const qrCodeBase64 = QRCODE_BASE64;
     
     const htmlContent = `
       <!DOCTYPE html>
