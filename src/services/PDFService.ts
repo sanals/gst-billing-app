@@ -1,17 +1,90 @@
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
+import { Asset } from 'expo-asset';
 import { Invoice } from '../types/invoice';
 import { CompanySettings, DEFAULT_COMPANY_SETTINGS } from '../types/company';
 import { numberToWords } from '../utils/numberToWords';
 import { BackupService } from './BackupService';
 
 export class PDFService {
+  /**
+   * Converts an image asset to base64 data URI for use in PDF
+   * @param imagePath Path to image in assets folder (e.g., require('../assets/logo.png'))
+   * @returns Base64 data URI string or empty string if image not found
+   */
+  static async getImageAsBase64(imagePath: number | string): Promise<string> {
+    try {
+      let asset;
+      if (typeof imagePath === 'number') {
+        // If it's a require() result (number), use Asset.fromModule
+        asset = Asset.fromModule(imagePath);
+      } else {
+        // If it's a string path, use Asset.fromURI
+        asset = Asset.fromURI(imagePath);
+      }
+      
+      await asset.downloadAsync();
+      
+      if (asset.localUri) {
+        const base64 = await FileSystem.readAsStringAsync(asset.localUri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        
+        // Determine MIME type from file extension
+        const uri = asset.localUri.toLowerCase();
+        let mimeType = 'image/png';
+        if (uri.endsWith('.jpg') || uri.endsWith('.jpeg')) {
+          mimeType = 'image/jpeg';
+        } else if (uri.endsWith('.png')) {
+          mimeType = 'image/png';
+        }
+        
+        return `data:${mimeType};base64,${base64}`;
+      }
+      
+      return '';
+    } catch (error) {
+      console.warn('PDFService: Could not load image:', error);
+      return '';
+    }
+  }
+
   static async generateInvoicePDF(invoice: Invoice, companySettings: CompanySettings | null = null): Promise<string> {
     console.log('PDFService: Starting invoice PDF generation');
     console.log('PDFService: Invoice has', invoice.items.length, 'items');
     
     const company = companySettings || DEFAULT_COMPANY_SETTINGS;
+    
+    // Load logo and QR code images as base64
+    let logoBase64 = '';
+    let qrCodeBase64 = '';
+    
+    // Try to load logo from assets folder (try PNG first, then JPG)
+    try {
+      const logoAsset = require('../../assets/logo.png');
+      logoBase64 = await PDFService.getImageAsBase64(logoAsset);
+    } catch (error) {
+      try {
+        const logoAsset = require('../../assets/logo.jpg');
+        logoBase64 = await PDFService.getImageAsBase64(logoAsset);
+      } catch (error2) {
+        console.log('PDFService: Logo not found, continuing without logo');
+      }
+    }
+    
+    // Try to load QR code from assets folder (try PNG first, then JPG)
+    try {
+      const qrCodeAsset = require('../../assets/qrcode.png');
+      qrCodeBase64 = await PDFService.getImageAsBase64(qrCodeAsset);
+    } catch (error) {
+      try {
+        const qrCodeAsset = require('../../assets/qrcode.jpg');
+        qrCodeBase64 = await PDFService.getImageAsBase64(qrCodeAsset);
+      } catch (error2) {
+        console.log('PDFService: QR code not found, continuing without QR code');
+      }
+    }
     
     const htmlContent = `
       <!DOCTYPE html>
@@ -28,10 +101,32 @@ export class PDFService {
               font-size: 12px;
             }
             .header { 
-              text-align: center; 
+              display: grid;
+              grid-template-columns: 140px 1fr 140px;
+              align-items: flex-start;
               margin-bottom: 20px;
               border-bottom: 3px solid #333;
               padding-bottom: 15px;
+              position: relative;
+            }
+            .header-left {
+              display: flex;
+              align-items: flex-start;
+              justify-content: flex-start;
+            }
+            .logo {
+              max-width: 120px;
+              max-height: 120px;
+              object-fit: contain;
+            }
+            .header-center {
+              text-align: center;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+            }
+            .header-right {
+              /* Empty space to balance the logo on the left */
             }
             .company-name { 
               font-size: 26px; 
@@ -129,10 +224,37 @@ export class PDFService {
               font-style: italic;
             }
             .bank-details {
+              display: flex;
+              align-items: flex-start;
               margin: 20px 0;
               padding: 15px;
               background-color: #f9f9f9;
               border: 1px solid #333;
+            }
+            .bank-left {
+              width: 140px;
+              flex-shrink: 0;
+              margin-right: 20px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              padding: 10px;
+            }
+            .qrcode {
+              max-width: 120px;
+              max-height: 120px;
+              width: 100%;
+              height: auto;
+              object-fit: contain;
+              display: block;
+              margin: 0 auto;
+            }
+            .bank-right {
+              flex: 1;
+              display: flex;
+              flex-direction: column;
+              justify-content: flex-start;
+              padding-top: 10px;
             }
             .bank-title {
               font-weight: bold;
@@ -163,15 +285,21 @@ export class PDFService {
         </head>
         <body>
           <div class="header">
-            <div class="company-name">${company.name}</div>
-            <div class="company-details">
-              ${company.address1}<br/>
-              ${company.address2}, ${company.city}-${company.pincode}<br/>
-              Mobile: ${company.mobile1}${company.mobile2 ? ', ' + company.mobile2 : ''}
-              ${company.officePhone ? ' | Office: ' + company.officePhone : ''}<br/>
-              Email: ${company.email}<br/>
-              <span class="gstin">GSTIN/UIN: ${company.gstin}</span>
+            <div class="header-left">
+              ${logoBase64 ? `<img src="${logoBase64}" alt="Company Logo" class="logo" />` : ''}
             </div>
+            <div class="header-center">
+              <div class="company-name">${company.name}</div>
+              <div class="company-details">
+                ${company.address1}<br/>
+                ${company.address2}, ${company.city}-${company.pincode}<br/>
+                Mobile: ${company.mobile1}${company.mobile2 ? ', ' + company.mobile2 : ''}
+                ${company.officePhone ? ' | Office: ' + company.officePhone : ''}<br/>
+                Email: ${company.email}<br/>
+                <span class="gstin">GSTIN/UIN: ${company.gstin}</span>
+              </div>
+            </div>
+            <div class="header-right"></div>
           </div>
 
           <div class="invoice-header">
@@ -267,11 +395,16 @@ export class PDFService {
           </div>
 
           <div class="bank-details">
-            <div class="bank-title">Company's Bank Details:</div>
-            <div class="bank-row"><strong>A/c Holder's Name:</strong> ${company.bankDetails.accountHolder}</div>
-            <div class="bank-row"><strong>Bank Name:</strong> ${company.bankDetails.bankName}</div>
-            <div class="bank-row"><strong>A/c No.:</strong> ${company.bankDetails.accountNumber}</div>
-            <div class="bank-row"><strong>Branch & IFSC Code:</strong> ${company.bankDetails.branch} & ${company.bankDetails.ifscCode}</div>
+            <div class="bank-left">
+              ${qrCodeBase64 ? `<img src="${qrCodeBase64}" alt="QR Code" class="qrcode" />` : ''}
+            </div>
+            <div class="bank-right">
+              <div class="bank-title">Company's Bank Details:</div>
+              <div class="bank-row"><strong>A/c Holder's Name:</strong> ${company.bankDetails.accountHolder}</div>
+              <div class="bank-row"><strong>Bank Name:</strong> ${company.bankDetails.bankName}</div>
+              <div class="bank-row"><strong>A/c No.:</strong> ${company.bankDetails.accountNumber}</div>
+              <div class="bank-row"><strong>Branch & IFSC Code:</strong> ${company.bankDetails.branch} & ${company.bankDetails.ifscCode}</div>
+            </div>
           </div>
 
           <div class="signature-section">
