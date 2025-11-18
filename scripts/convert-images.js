@@ -29,17 +29,26 @@ if (!fs.existsSync(qrPath)) {
   qrPath = path.join(__dirname, '../assets/qrcode.jpg');
 }
 
+// Try to load seal (try seal.png first, then seal.jpg)
+let sealPath = path.join(__dirname, '../assets/seal.png');
+if (!fs.existsSync(sealPath)) {
+  sealPath = path.join(__dirname, '../assets/seal.jpg');
+}
+
 const logoBase64 = imageToBase64(logoPath);
 const qrBase64 = imageToBase64(qrPath);
+const sealBase64 = imageToBase64(sealPath);
 
 // Generate the TypeScript file
 const tsContent = `// Auto-generated file - do not edit manually
-// Generated from assets/logo.png and assets/qrcode.png
+// Generated from assets/logo.png, assets/qrcode.png, and assets/seal.png
 // To regenerate, run: node scripts/convert-images.js
 
 export const LOGO_BASE64 = ${logoBase64 ? `'${logoBase64}'` : `''`};
 
 export const QRCODE_BASE64 = ${qrBase64 ? `'${qrBase64}'` : `''`};
+
+export const SEAL_BASE64 = ${sealBase64 ? `'${sealBase64}'` : `''`};
 `;
 
 const outputPath = path.join(__dirname, '../src/constants/assets.ts');
@@ -56,4 +65,5 @@ console.log('✅ Images converted successfully!');
 console.log(`📁 Output: ${outputPath}`);
 console.log(`🖼️  Logo: ${logoBase64 ? `${Math.round(logoBase64.length / 1024)} KB` : 'Not found'}`);
 console.log(`📱 QR Code: ${qrBase64 ? `${Math.round(qrBase64.length / 1024)} KB` : 'Not found'}`);
+console.log(`🔖 Seal: ${sealBase64 ? `${Math.round(sealBase64.length / 1024)} KB` : 'Not found'}`);
 

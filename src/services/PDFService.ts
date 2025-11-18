@@ -5,7 +5,7 @@ import { Invoice } from '../types/invoice';
 import { CompanySettings, DEFAULT_COMPANY_SETTINGS } from '../types/company';
 import { numberToWords } from '../utils/numberToWords';
 import { BackupService } from './BackupService';
-import { LOGO_BASE64, QRCODE_BASE64 } from '../constants/assets';
+import { LOGO_BASE64, QRCODE_BASE64, SEAL_BASE64 } from '../constants/assets';
 
 export class PDFService {
   static async generateInvoicePDF(invoice: Invoice, companySettings: CompanySettings | null = null): Promise<string> {
@@ -17,6 +17,7 @@ export class PDFService {
     // Use pre-embedded base64 images (generated from assets at build time)
     const logoBase64 = LOGO_BASE64;
     const qrCodeBase64 = QRCODE_BASE64;
+    const sealBase64 = SEAL_BASE64;
     
     const htmlContent = `
       <!DOCTYPE html>
@@ -25,10 +26,15 @@ export class PDFService {
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <style>
+            @page {
+              margin: 0;
+              padding-top: 15px;
+            }
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body { 
               font-family: Arial, sans-serif; 
               padding: 20px;
+              padding-top: 15px;
               background-color: #FFF9E6;
               font-size: 12px;
             }
@@ -155,13 +161,22 @@ export class PDFService {
               border: 2px dashed #fbbf24;
               font-style: italic;
             }
+            .bank-and-signature-container {
+              display: flex;
+              align-items: flex-start;
+              gap: 20px;
+              margin: 20px 0;
+              page-break-inside: avoid;
+              padding-top: 15px;
+            }
             .bank-details {
               display: flex;
               align-items: flex-start;
-              margin: 20px 0;
               padding: 15px;
               background-color: #f9f9f9;
               border: 1px solid #333;
+              width: 50%;
+              flex-shrink: 0;
             }
             .bank-left {
               width: 140px;
@@ -198,17 +213,40 @@ export class PDFService {
               font-size: 12px;
             }
             .signature-section {
+              flex: 1;
               text-align: right;
-              margin-top: 40px;
+              margin-top: 60px;
+              padding-top: 10px;
+              position: relative;
+              page-break-inside: avoid;
             }
             .for-company {
               font-weight: bold;
-              margin-bottom: 50px;
+              margin-bottom: 20px;
+              position: relative;
+              text-align: right;
+              z-index: 0;
+            }
+            .seal-container {
+              position: absolute;
+              right: 110px;
+              top: -35px;
+              z-index: 2;
+              pointer-events: none;
+            }
+            .seal {
+              width: 143px;
+              height: 143px;
+              object-fit: contain;
+              opacity: 0.9;
             }
             .signature-line {
               border-top: 2px solid #000;
               width: 200px;
-              margin: 0 0 5px auto;
+              margin: 70px 0 5px auto;
+            }
+            .authorised-signatory {
+              margin-top: 5px;
             }
             .discount-row { color: #dc2626; }
             .roundoff-positive { color: #16a34a; }
@@ -326,23 +364,27 @@ export class PDFService {
             ${numberToWords(invoice.grandTotal)}
           </div>
 
-          <div class="bank-details">
-            <div class="bank-left">
-              ${qrCodeBase64 ? `<img src="${qrCodeBase64}" alt="QR Code" class="qrcode" />` : ''}
+          <div class="bank-and-signature-container">
+            <div class="bank-details">
+              <div class="bank-left">
+                ${qrCodeBase64 ? `<img src="${qrCodeBase64}" alt="QR Code" class="qrcode" />` : ''}
+              </div>
+              <div class="bank-right">
+                <div class="bank-title">Company's Bank Details:</div>
+                <div class="bank-row"><strong>A/c Holder's Name:</strong> ${company.bankDetails.accountHolder}</div>
+                <div class="bank-row"><strong>Bank Name:</strong> ${company.bankDetails.bankName}</div>
+                <div class="bank-row"><strong>A/c No.:</strong> ${company.bankDetails.accountNumber}</div>
+                <div class="bank-row"><strong>Branch & IFSC Code:</strong> ${company.bankDetails.branch} & ${company.bankDetails.ifscCode}</div>
+              </div>
             </div>
-            <div class="bank-right">
-              <div class="bank-title">Company's Bank Details:</div>
-              <div class="bank-row"><strong>A/c Holder's Name:</strong> ${company.bankDetails.accountHolder}</div>
-              <div class="bank-row"><strong>Bank Name:</strong> ${company.bankDetails.bankName}</div>
-              <div class="bank-row"><strong>A/c No.:</strong> ${company.bankDetails.accountNumber}</div>
-              <div class="bank-row"><strong>Branch & IFSC Code:</strong> ${company.bankDetails.branch} & ${company.bankDetails.ifscCode}</div>
+            <div class="signature-section">
+              <div class="for-company">
+                For ${company.name}
+                ${sealBase64 ? `<div class="seal-container"><img src="${sealBase64}" alt="Seal" class="seal" /></div>` : ''}
+              </div>
+              <div class="signature-line"></div>
+              <div class="authorised-signatory">Authorised Signatory</div>
             </div>
-          </div>
-
-          <div class="signature-section">
-            <div class="for-company">For ${company.name}</div>
-            <div class="signature-line"></div>
-            <div>Authorised Signatory</div>
           </div>
         </body>
       </html>

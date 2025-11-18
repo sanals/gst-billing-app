@@ -3,21 +3,21 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const INVOICE_COUNTER_KEY = '@invoice_counter';
 
 interface CounterData {
-  [prefix: string]: number; // e.g., { "KTMVS": 101, "INV": 1 }
+  [prefix: string]: number; // e.g., { "KTMVS": 1, "INV": 5 } (stores last used number)
 }
 
 export class InvoiceCounterService {
   /**
    * Get the next invoice number for a given prefix
-   * Returns formatted string like "KTMVS-101"
+   * Returns formatted string like "KTMVS-1" (starts from 1)
    */
   static async getNextInvoiceNumber(prefix: string): Promise<{
-    number: string; // Just the number "101"
-    fullNumber: string; // Complete "KTMVS-101"
+    number: string; // Just the number "1"
+    fullNumber: string; // Complete "KTMVS-1"
   }> {
     try {
       const counters = await this.loadCounters();
-      const currentNumber = counters[prefix] || 100; // Start from 100 if not found
+      const currentNumber = counters[prefix] || 0; // Start from 0 if not found (first invoice will be 1)
       const nextNumber = currentNumber + 1;
       
       return {
@@ -28,8 +28,8 @@ export class InvoiceCounterService {
       console.error('Error getting next invoice number:', error);
       // Return a fallback number
       return {
-        number: '101',
-        fullNumber: `${prefix}-101`,
+        number: '1',
+        fullNumber: `${prefix}-1`,
       };
     }
   }
@@ -40,7 +40,7 @@ export class InvoiceCounterService {
   static async incrementCounter(prefix: string): Promise<void> {
     try {
       const counters = await this.loadCounters();
-      const currentNumber = counters[prefix] || 100;
+      const currentNumber = counters[prefix] || 0;
       counters[prefix] = currentNumber + 1;
       await this.saveCounters(counters);
       console.log(`Counter incremented for ${prefix}: ${counters[prefix]}`);
@@ -56,10 +56,10 @@ export class InvoiceCounterService {
   static async getCurrentCounter(prefix: string): Promise<number> {
     try {
       const counters = await this.loadCounters();
-      return counters[prefix] || 100;
+      return counters[prefix] || 0;
     } catch (error) {
       console.error('Error getting current counter:', error);
-      return 100;
+      return 0;
     }
   }
 
@@ -82,7 +82,7 @@ export class InvoiceCounterService {
   /**
    * Reset counter for a prefix (e.g., start of new fiscal year)
    */
-  static async resetCounter(prefix: string, startFrom: number = 100): Promise<void> {
+  static async resetCounter(prefix: string, startFrom: number = 0): Promise<void> {
     try {
       const counters = await this.loadCounters();
       counters[prefix] = startFrom;

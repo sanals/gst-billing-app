@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useTheme } from '../contexts/ThemeContext';
@@ -206,36 +207,45 @@ const InvoicePreviewScreen = ({ route, navigation }: any) => {
             </Text>
           </View>
 
-          {/* Bank Details Section */}
-          {companySettings && (
-            <View style={styles.bankDetails}>
-              <Text style={styles.bankDetailsTitle}>Company's Bank Details</Text>
-              <View style={styles.bankDetailsContent}>
-                <Text style={styles.bankDetailRow}>
-                  <Text style={styles.bankDetailLabel}>A/c Holder's Name: </Text>
-                  <Text style={styles.bankDetailValue}>{companySettings.bankDetails.accountHolder}</Text>
-                </Text>
-                <Text style={styles.bankDetailRow}>
-                  <Text style={styles.bankDetailLabel}>Bank Name: </Text>
-                  <Text style={styles.bankDetailValue}>{companySettings.bankDetails.bankName}</Text>
-                </Text>
-                <Text style={styles.bankDetailRow}>
-                  <Text style={styles.bankDetailLabel}>A/c No.: </Text>
-                  <Text style={styles.bankDetailValue}>{companySettings.bankDetails.accountNumber}</Text>
-                </Text>
-                <Text style={styles.bankDetailRow}>
-                  <Text style={styles.bankDetailLabel}>Branch & IFSC Code: </Text>
-                  <Text style={styles.bankDetailValue}>{companySettings.bankDetails.branch} & {companySettings.bankDetails.ifscCode}</Text>
-                </Text>
+          {/* Bank Details and Signature Section */}
+          <View style={styles.bankAndSignatureContainer}>
+            {companySettings && (
+              <View style={styles.bankDetails}>
+                <Text style={styles.bankDetailsTitle}>Company's Bank Details</Text>
+                <View style={styles.bankDetailsContent}>
+                  <Text style={styles.bankDetailRow}>
+                    <Text style={styles.bankDetailLabel}>A/c Holder's Name: </Text>
+                    <Text style={styles.bankDetailValue}>{companySettings.bankDetails.accountHolder}</Text>
+                  </Text>
+                  <Text style={styles.bankDetailRow}>
+                    <Text style={styles.bankDetailLabel}>Bank Name: </Text>
+                    <Text style={styles.bankDetailValue}>{companySettings.bankDetails.bankName}</Text>
+                  </Text>
+                  <Text style={styles.bankDetailRow}>
+                    <Text style={styles.bankDetailLabel}>A/c No.: </Text>
+                    <Text style={styles.bankDetailValue}>{companySettings.bankDetails.accountNumber}</Text>
+                  </Text>
+                  <Text style={styles.bankDetailRow}>
+                    <Text style={styles.bankDetailLabel}>Branch & IFSC Code: </Text>
+                    <Text style={styles.bankDetailValue}>{companySettings.bankDetails.branch} & {companySettings.bankDetails.ifscCode}</Text>
+                  </Text>
+                </View>
               </View>
-            </View>
-          )}
+            )}
 
-          {/* Signature Section */}
-          <View style={styles.signatureSection}>
-            <Text style={styles.forCompany}>For {companySettings?.name || 'JANAKI ENTERPRISES'}</Text>
-            <View style={styles.signatureLine} />
-            <Text style={styles.authorisedSignatory}>Authorised Signatory</Text>
+            {/* Signature Section */}
+            <View style={styles.signatureSection}>
+              <View style={styles.forCompanyContainer}>
+                <Text style={styles.forCompany}>For {companySettings?.name || 'JANAKI ENTERPRISES'}</Text>
+                <Image 
+                  source={require('../../assets/seal.png')} 
+                  style={styles.seal}
+                  resizeMode="contain"
+                />
+              </View>
+              <View style={styles.signatureLine} />
+              <Text style={styles.authorisedSignatory}>Authorised Signatory</Text>
+            </View>
           </View>
         </View>
       </ScrollView>
@@ -434,13 +444,20 @@ const getStyles = (theme: any) => StyleSheet.create({
     color: theme.text.primary,
     lineHeight: 18,
   },
-  bankDetails: {
+  bankAndSignatureContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 20,
     marginTop: 20,
+  },
+  bankDetails: {
     padding: 15,
     backgroundColor: theme.background,
     borderRadius: 6,
     borderWidth: 1,
     borderColor: theme.border,
+    width: '50%',
+    flexShrink: 0,
   },
   bankDetailsTitle: {
     fontSize: 14,
@@ -465,25 +482,42 @@ const getStyles = (theme: any) => StyleSheet.create({
     color: theme.text.primary,
   },
   signatureSection: {
-    marginTop: 30,
+    flex: 1,
     alignItems: 'flex-end',
-    paddingRight: 20,
+    marginTop: 60,
+    paddingTop: 10,
+  },
+  forCompanyContainer: {
+    position: 'relative',
+    marginBottom: 20,
+    alignItems: 'flex-end',
+  },
+  seal: {
+    position: 'absolute',
+    right: 110,
+    top: -35,
+    width: 143,
+    height: 143,
+    opacity: 0.9,
+    zIndex: 2,
   },
   forCompany: {
     fontSize: 13,
     fontWeight: '600',
     color: theme.text.primary,
-    marginBottom: 40,
+    zIndex: 0,
   },
   signatureLine: {
     width: 200,
     height: 1,
     backgroundColor: theme.text.primary,
+    marginTop: 70,
     marginBottom: 5,
   },
   authorisedSignatory: {
     fontSize: 12,
     color: theme.text.secondary,
+    marginTop: 5,
   },
   generateButton: {
     backgroundColor: theme.primary,
