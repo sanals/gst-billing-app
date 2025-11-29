@@ -1,83 +1,120 @@
-# GST Billing - React Native App
+# GST Billing App
 
-A working React Native app with basic navigation and simple home screen built with Expo and React Navigation.
+A comprehensive React Native application for generating GST-compliant invoices with product management, outlet management, and automated backup features.
 
 ## Features
 
-- ✅ React Native with Expo
-- ✅ React Navigation (Native Stack Navigator)
-- ✅ Multiple screens with navigation
-- ✅ Beautiful and modern UI
-- ✅ Home, Details, and Settings screens
+- 📄 **Invoice Generation**: Create GST-compliant invoices with automatic calculations
+- 📦 **Product Management**: Manage products with HSN codes, GST rates, and stock tracking
+- 🏢 **Outlet Management**: Store customer/outlet information
+- 💾 **Backup & Sync**: Manual backup and Google Drive auto-sync
+- 🎨 **Modern UI**: Beautiful, responsive interface with dark mode support
+- 📱 **Cross-Platform**: Works on Android (iOS support can be added)
 
 ## Prerequisites
 
-- Node.js (v14 or higher)
-- npm or yarn
-- Expo Go app on your mobile device (for testing)
+- **Node.js** (v16 or higher)
+- **npm** or **yarn**
+- **Android Studio** (for Android builds)
+- **Java JDK 11+** (included with Android Studio)
 
-## Installation
+## Quick Start
 
-1. Clone the repository
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-
-## Running the App
-
-Start the Expo development server:
+### 1. Install Dependencies
 
 ```bash
+npm install
+```
+
+### 2. Development Mode
+
+For development with hot reload:
+
+```bash
+# Start Expo dev server
 npm start
+
+# Or run directly on Android
+npm run android
 ```
 
-This will open the Expo DevTools in your browser. From there you can:
+### 3. Build for Production
 
-- Press `a` to open on Android emulator
-- Press `i` to open on iOS simulator (macOS only)
-- Scan the QR code with Expo Go app on your phone
+See [BUILD.md](./BUILD.md) for detailed build instructions.
 
-### Other Commands
+**Quick build commands:**
 
 ```bash
-npm run android  # Run on Android
-npm run ios      # Run on iOS
-npm run web      # Run on web browser
+# Build and run on Android device/emulator
+npx expo run:android
+
+# Build release APK
+cd android
+.\gradlew.bat assembleRelease
 ```
+
+The APK will be located at: `android/app/build/outputs/apk/release/app-release.apk`
 
 ## Project Structure
 
 ```
-gst_billing/
-├── screens/
-│   ├── HomeScreen.js      # Main home screen
-│   ├── DetailsScreen.js   # Details page
-│   └── SettingsScreen.js  # Settings page
-├── App.js                 # Main app with navigation setup
-├── package.json           # Dependencies
-└── README.md             # This file
+gst-billing-app/
+├── src/
+│   ├── screens/          # App screens
+│   ├── services/         # Business logic services
+│   ├── types/           # TypeScript type definitions
+│   ├── utils/           # Utility functions
+│   ├── contexts/        # React contexts
+│   └── navigation/      # Navigation setup
+├── assets/              # Images and static assets
+├── android/             # Android native code
+└── scripts/             # Build scripts
 ```
 
-## Navigation
+## Documentation
 
-The app uses React Navigation with a native stack navigator:
+- **[FEATURES.md](./FEATURES.md)** - Complete app features and architecture overview
+- **[BUILD.md](./BUILD.md)** - Detailed build instructions
+- **Logo & QR Code Setup**: See [LOGO_QRCODE_SETUP.md](./LOGO_QRCODE_SETUP.md)
+- **Google Drive Backup**: See [SETUP_GOOGLE_DRIVE_BACKUP.md](./SETUP_GOOGLE_DRIVE_BACKUP.md)
+- **Testing Guide**: See [TEST_INSTRUCTIONS.md](./TEST_INSTRUCTIONS.md)
 
-- **Home Screen**: Welcome screen with navigation buttons
-- **Details Screen**: Information page with app features
-- **Settings Screen**: Settings page with placeholder options
+## Environment Setup
 
-## Dependencies
+### Android Development
 
-- `expo`: ~54.0.23
-- `react`: 19.1.0
-- `react-native`: 0.81.5
-- `@react-navigation/native`: ^7.1.20
-- `@react-navigation/native-stack`: ^7.6.3
-- `react-native-screens`: ~4.16.0
-- `react-native-safe-area-context`: ~5.6.0
+1. Install Android Studio
+2. Set `ANDROID_HOME` environment variable:
+   ```
+   ANDROID_HOME=C:\Users\YourUsername\AppData\Local\Android\Sdk
+   ```
+3. Add to PATH:
+   ```
+   %ANDROID_HOME%\platform-tools
+   %ANDROID_HOME%\tools
+   ```
+
+## Scripts
+
+- `npm start` - Start Expo development server
+- `npm run android` - Run on Android
+- `npm run web` - Run in web browser
+- `node scripts/convert-images.js` - Convert logo/QR code to base64 for PDF
+
+## Troubleshooting
+
+### Build Issues
+
+- **"ANDROID_HOME not set"**: Set the environment variable and restart terminal
+- **"No connected devices"**: Enable USB debugging on device or start emulator
+- **Build fails**: Ensure Android SDK Platform 33+ and Build-Tools are installed
+
+### App Issues
+
+- **Logo not updating in PDF**: Run `node scripts/convert-images.js` after updating logo
+- **Invoice numbers skipping**: Fixed in latest version - uses atomic reservation
+- **Keyboard covering modals**: Fixed in latest version - uses KeyboardAvoidingView
 
 ## License
 
 MIT
-
