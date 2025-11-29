@@ -8,7 +8,8 @@ interface CounterData {
 
 export class InvoiceCounterService {
   /**
-   * Get the next invoice number for a given prefix
+   * Get the next invoice number for a given prefix (without reserving)
+   * Use this for preview purposes only
    * Returns formatted string like "KTMVS-1" (starts from 1)
    */
   static async getNextInvoiceNumber(prefix: string): Promise<{
@@ -35,7 +36,38 @@ export class InvoiceCounterService {
   }
 
   /**
+   * Reserve and return the next invoice number atomically
+   * This prevents race conditions by immediately incrementing the counter
+   * Use this when actually creating an invoice
+   */
+  static async reserveNextInvoiceNumber(prefix: string): Promise<{
+    number: string;
+    fullNumber: string;
+  }> {
+    try {
+      const counters = await this.loadCounters();
+      const currentNumber = counters[prefix] || 0;
+      const nextNumber = currentNumber + 1;
+      
+      // Immediately save the incremented counter (atomic reservation)
+      counters[prefix] = nextNumber;
+      await this.saveCounters(counters);
+      
+      console.log(`Invoice number reserved for ${prefix}: ${nextNumber}`);
+      
+      return {
+        number: nextNumber.toString(),
+        fullNumber: `${prefix}-${nextNumber}`,
+      };
+    } catch (error) {
+      console.error('Error reserving invoice number:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Increment the counter after successful invoice creation
+   * @deprecated Use reserveNextInvoiceNumber instead for atomic operations
    */
   static async incrementCounter(prefix: string): Promise<void> {
     try {
@@ -46,6 +78,27 @@ export class InvoiceCounterService {
       console.log(`Counter incremented for ${prefix}: ${counters[prefix]}`);
     } catch (error) {
       console.error('Error incrementing counter:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Use a specific invoice number (for manual entry)
+   * Updates the counter if the number is higher than current
+   */
+  static async useInvoiceNumber(prefix: string, number: number): Promise<void> {
+    try {
+      const counters = await this.loadCounters();
+      const currentNumber = counters[prefix] || 0;
+      
+      // Only update if the used number is higher than current counter
+      if (number > currentNumber) {
+        counters[prefix] = number;
+        await this.saveCounters(counters);
+        console.log(`Counter updated for ${prefix}: ${number}`);
+      }
+    } catch (error) {
+      console.error('Error using invoice number:', error);
       throw error;
     }
   }

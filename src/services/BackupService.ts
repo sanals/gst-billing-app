@@ -121,18 +121,26 @@ export class BackupService {
         (data) => data ? JSON.parse(data) : null
       ).catch(() => null);
 
-      // Get invoice counter
-      const invoiceCounter = await AsyncStorage.getItem('invoice_counter_KTMVS').then(
-        (data) => data || '0'
-      ).catch(() => '0');
+      // Get invoice counters (all prefixes)
+      const invoiceCounters = await AsyncStorage.getItem('@invoice_counter').then(
+        (data) => data ? JSON.parse(data) : {}
+      ).catch(() => ({}));
+
+      // Get outlets
+      const outlets = await AsyncStorage.getItem('@outlets').then(
+        (data) => data ? JSON.parse(data) : []
+      ).catch(() => []);
 
       // Create backup data object
       const backupData = {
-        version: '1.0',
+        version: '2.0', // Updated version for new format
         exportDate: new Date().toISOString(),
         products,
         companySettings,
-        invoiceCounter: parseInt(invoiceCounter, 10),
+        invoiceCounters, // Now stores all counters as object
+        outlets,
+        // Keep legacy field for backward compatibility
+        invoiceCounter: invoiceCounters['KTMVS'] || invoiceCounters['INV'] || 0,
       };
 
       // Save to file
@@ -194,9 +202,19 @@ export class BackupService {
         await AsyncStorage.setItem('@company_settings', JSON.stringify(backupData.companySettings));
       }
 
-      // Restore invoice counter
-      if (backupData.invoiceCounter) {
-        await AsyncStorage.setItem('invoice_counter_KTMVS', backupData.invoiceCounter.toString());
+      // Restore invoice counters
+      if (backupData.invoiceCounters) {
+        // New format (v2.0+): object with all prefixes
+        await AsyncStorage.setItem('@invoice_counter', JSON.stringify(backupData.invoiceCounters));
+      } else if (backupData.invoiceCounter !== undefined) {
+        // Legacy format (v1.0): single number, assume KTMVS prefix
+        const legacyCounters = { 'KTMVS': backupData.invoiceCounter };
+        await AsyncStorage.setItem('@invoice_counter', JSON.stringify(legacyCounters));
+      }
+
+      // Restore outlets
+      if (backupData.outlets) {
+        await AsyncStorage.setItem('@outlets', JSON.stringify(backupData.outlets));
       }
 
       await this.updateBackupMetadata();
@@ -278,17 +296,24 @@ export class BackupService {
         (data) => data ? JSON.parse(data) : null
       ).catch(() => null);
 
-      const invoiceCounter = await AsyncStorage.getItem('invoice_counter_KTMVS').then(
-        (data) => data || '0'
-      ).catch(() => '0');
+      const invoiceCounters = await AsyncStorage.getItem('@invoice_counter').then(
+        (data) => data ? JSON.parse(data) : {}
+      ).catch(() => ({}));
+
+      const outlets = await AsyncStorage.getItem('@outlets').then(
+        (data) => data ? JSON.parse(data) : []
+      ).catch(() => []);
 
       // Create backup data object
       const backupData = {
-        version: '1.0',
+        version: '2.0',
         exportDate: new Date().toISOString(),
         products,
         companySettings,
-        invoiceCounter: parseInt(invoiceCounter, 10),
+        invoiceCounters,
+        outlets,
+        // Keep legacy field for backward compatibility
+        invoiceCounter: invoiceCounters['KTMVS'] || invoiceCounters['INV'] || 0,
       };
 
       // Upload to Google Drive
@@ -347,9 +372,19 @@ export class BackupService {
         await AsyncStorage.setItem('@company_settings', JSON.stringify(backupData.companySettings));
       }
 
-      // Restore invoice counter
-      if (backupData.invoiceCounter) {
-        await AsyncStorage.setItem('invoice_counter_KTMVS', backupData.invoiceCounter.toString());
+      // Restore invoice counters
+      if (backupData.invoiceCounters) {
+        // New format (v2.0+): object with all prefixes
+        await AsyncStorage.setItem('@invoice_counter', JSON.stringify(backupData.invoiceCounters));
+      } else if (backupData.invoiceCounter !== undefined) {
+        // Legacy format (v1.0): single number, assume KTMVS prefix
+        const legacyCounters = { 'KTMVS': backupData.invoiceCounter };
+        await AsyncStorage.setItem('@invoice_counter', JSON.stringify(legacyCounters));
+      }
+
+      // Restore outlets
+      if (backupData.outlets) {
+        await AsyncStorage.setItem('@outlets', JSON.stringify(backupData.outlets));
       }
 
       await this.updateBackupMetadata();

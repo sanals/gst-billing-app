@@ -14,6 +14,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { CompanySettings } from '../types/company';
 import { CompanySettingsService } from '../services/CompanySettingsService';
 import { BackupService } from '../services/BackupService';
+import { InvoiceCounterService } from '../services/InvoiceCounterService';
 import { useGoogleAuth } from '../contexts/GoogleAuthContext';
 
 const CompanySettingsScreen = ({ navigation }: any) => {
@@ -23,10 +24,20 @@ const CompanySettingsScreen = ({ navigation }: any) => {
   const [settings, setSettings] = useState<CompanySettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [currentCounter, setCurrentCounter] = useState<number>(0);
+  const [newCounterValue, setNewCounterValue] = useState<string>('');
+  const [savingCounter, setSavingCounter] = useState(false);
 
   useEffect(() => {
     loadSettings();
   }, []);
+
+  // Load counter when settings change (to get the prefix)
+  useEffect(() => {
+    if (settings?.invoicePrefix) {
+      loadCurrentCounter();
+    }
+  }, [settings?.invoicePrefix]);
 
   const loadSettings = async () => {
     try {
@@ -37,6 +48,51 @@ const CompanySettingsScreen = ({ navigation }: any) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadCurrentCounter = async () => {
+    if (!settings?.invoicePrefix) return;
+    try {
+      const counter = await InvoiceCounterService.getCurrentCounter(settings.invoicePrefix);
+      setCurrentCounter(counter);
+    } catch (error) {
+      console.error('Error loading counter:', error);
+    }
+  };
+
+  const handleSetCounter = async () => {
+    if (!settings?.invoicePrefix) return;
+    
+    const newValue = parseInt(newCounterValue.trim(), 10);
+    if (isNaN(newValue) || newValue < 0) {
+      Alert.alert('Invalid Value', 'Please enter a valid positive number');
+      return;
+    }
+
+    Alert.alert(
+      'Confirm Counter Change',
+      `This will set the last used invoice number to ${newValue}.\n\nThe next invoice will be ${settings.invoicePrefix}-${newValue + 1}.\n\nAre you sure?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Confirm',
+          style: 'destructive',
+          onPress: async () => {
+            setSavingCounter(true);
+            try {
+              await InvoiceCounterService.setCounter(settings.invoicePrefix, newValue);
+              setCurrentCounter(newValue);
+              setNewCounterValue('');
+              Alert.alert('Success', `Invoice counter updated. Next invoice will be ${settings.invoicePrefix}-${newValue + 1}`);
+            } catch (error) {
+              Alert.alert('Error', 'Failed to update counter');
+            } finally {
+              setSavingCounter(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleSave = async () => {
@@ -395,6 +451,55 @@ const CompanySettingsScreen = ({ navigation }: any) => {
             This prefix will be added to all invoice numbers (e.g., KTMVS-101)
           </Text>
         </View>
+
+        {/* Invoice Counter Management Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Invoice Counter</Text>
+          
+          <View style={styles.counterCard}>
+            <View style={styles.counterInfo}>
+              <Text style={styles.counterLabel}>Current Counter</Text>
+              <Text style={styles.counterValue}>{currentCounter}</Text>
+              <Text style={styles.counterHint}>
+                Last used: {settings.invoicePrefix}-{currentCounter}
+              </Text>
+              <Text style={styles.counterHint}>
+                Next invoice: {settings.invoicePrefix}-{currentCounter + 1}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.counterSetSection}>
+            <Text style={styles.label}>Set Counter Value</Text>
+            <Text style={styles.hint}>
+              Use this to set a starting number when reinstalling the app or to correct the counter
+            </Text>
+            <View style={styles.counterInputRow}>
+              <TextInput
+                style={styles.counterInput}
+                value={newCounterValue}
+                onChangeText={setNewCounterValue}
+                placeholder="e.g., 100"
+                keyboardType="number-pad"
+                placeholderTextColor={theme.text.light}
+              />
+              <TouchableOpacity
+                style={[styles.setCounterButton, savingCounter && styles.buttonDisabled]}
+                onPress={handleSetCounter}
+                disabled={savingCounter || !newCounterValue.trim()}
+              >
+                {savingCounter ? (
+                  <ActivityIndicator color={theme.text.inverse} size="small" />
+                ) : (
+                  <Text style={styles.setCounterButtonText}>Set</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.warningText}>
+              ⚠️ Be careful! Setting this to {newCounterValue || '50'} means the next invoice will be {settings.invoicePrefix}-{(parseInt(newCounterValue, 10) || 50) + 1}
+            </Text>
+          </View>
+        </View>
       </ScrollView>
 
       <TouchableOpacity
@@ -489,6 +594,76 @@ const getStyles = (theme: any) => StyleSheet.create({
     color: theme.text.inverse,
     fontSize: 18,
     fontWeight: '700',
+  },
+  counterCard: {
+    backgroundColor: theme.surface,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: theme.border,
+  },
+  counterInfo: {
+    alignItems: 'center',
+  },
+  counterLabel: {
+    fontSize: 14,
+    color: theme.text.secondary,
+    marginBottom: 8,
+  },
+  counterValue: {
+    fontSize: 36,
+    fontWeight: '700',
+    color: theme.primary,
+    marginBottom: 8,
+  },
+  counterHint: {
+    fontSize: 13,
+    color: theme.text.secondary,
+    marginTop: 2,
+  },
+  counterSetSection: {
+    backgroundColor: theme.surface,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: theme.border,
+  },
+  counterInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 10,
+  },
+  counterInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: theme.border,
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    backgroundColor: theme.input.background,
+    color: theme.text.primary,
+  },
+  setCounterButton: {
+    backgroundColor: theme.primary,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  setCounterButtonText: {
+    color: theme.text.inverse,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+  warningText: {
+    fontSize: 12,
+    color: theme.warning || '#FF9800',
+    marginTop: 12,
+    fontStyle: 'italic',
   },
 });
 

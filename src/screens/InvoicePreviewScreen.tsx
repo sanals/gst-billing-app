@@ -22,7 +22,11 @@ import { numberToWords } from '../utils/numberToWords';
 const InvoicePreviewScreen = ({ route, navigation }: any) => {
   const { theme, themeMode } = useTheme();
   const styles = getStyles(theme);
-  const { invoice } = route.params as { invoice: Invoice };
+  const { invoice, isManualNumber, manualNumberValue } = route.params as { 
+    invoice: Invoice;
+    isManualNumber?: boolean;
+    manualNumberValue?: number;
+  };
   const [generating, setGenerating] = React.useState(false);
   const [companySettings, setCompanySettings] = React.useState<CompanySettings | null>(null);
 
@@ -54,9 +58,16 @@ const InvoicePreviewScreen = ({ route, navigation }: any) => {
         // Don't fail invoice generation if stock deduction fails, but log it
       }
       
-      // Increment invoice counter after successful PDF generation
-      await InvoiceCounterService.incrementCounter(invoice.invoicePrefix);
-      console.log(`Invoice counter incremented for ${invoice.invoicePrefix}`);
+      // Handle invoice counter:
+      // - For auto numbers: already reserved in CreateInvoiceScreen, no action needed
+      // - For manual numbers: update counter if the number is higher
+      if (isManualNumber && manualNumberValue) {
+        await InvoiceCounterService.useInvoiceNumber(invoice.invoicePrefix, manualNumberValue);
+        console.log(`Manual invoice number used: ${manualNumberValue}`);
+      } else {
+        // Counter was already incremented by reserveNextInvoiceNumber in CreateInvoiceScreen
+        console.log(`Invoice number ${invoice.fullInvoiceNumber} was already reserved`);
+      }
       
       setGenerating(false);
       

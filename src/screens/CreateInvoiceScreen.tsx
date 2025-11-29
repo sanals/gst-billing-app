@@ -47,6 +47,11 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
   // Company Settings
   const [companySettings, setCompanySettings] = useState<CompanySettings | null>(null);
   
+  // Invoice Number
+  const [manualInvoiceNumber, setManualInvoiceNumber] = useState<string>('');
+  const [useManualNumber, setUseManualNumber] = useState(false);
+  const [nextAutoNumber, setNextAutoNumber] = useState<string>('');
+  
   // UI
   const [showProductPicker, setShowProductPicker] = useState(false);
   const [showOutletPicker, setShowOutletPicker] = useState(false);
@@ -55,7 +60,15 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
     loadProducts();
     loadCompanySettings();
     loadOutlets();
+    loadNextInvoiceNumber();
   }, []);
+
+  // Reload next invoice number when company settings change (prefix might change)
+  useEffect(() => {
+    if (companySettings) {
+      loadNextInvoiceNumber();
+    }
+  }, [companySettings?.invoicePrefix]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -77,6 +90,12 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
   const loadCompanySettings = async () => {
     const settings = await CompanySettingsService.getSettings();
     setCompanySettings(settings);
+  };
+
+  const loadNextInvoiceNumber = async () => {
+    const prefix = companySettings?.invoicePrefix || 'INV';
+    const { fullNumber } = await InvoiceCounterService.getNextInvoiceNumber(prefix);
+    setNextAutoNumber(fullNumber);
   };
 
   const addProduct = (product: Product) => {
@@ -242,9 +261,28 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
       enableRoundOff,
     });
 
-    // Get invoice number
+    // Get invoice number - reserve it atomically to prevent race conditions
     const invoicePrefix = companySettings?.invoicePrefix || 'INV';
-    const { number, fullNumber } = await InvoiceCounterService.getNextInvoiceNumber(invoicePrefix);
+    let number: string;
+    let fullNumber: string;
+    let isManualNumber = false;
+
+    if (useManualNumber && manualInvoiceNumber.trim()) {
+      // Use manual invoice number
+      const manualNum = parseInt(manualInvoiceNumber.trim(), 10);
+      if (isNaN(manualNum) || manualNum <= 0) {
+        Alert.alert('Invalid Invoice Number', 'Please enter a valid positive number');
+        return;
+      }
+      number = manualNum.toString();
+      fullNumber = `${invoicePrefix}-${manualNum}`;
+      isManualNumber = true;
+    } else {
+      // Reserve next auto number atomically (prevents skipping)
+      const reserved = await InvoiceCounterService.reserveNextInvoiceNumber(invoicePrefix);
+      number = reserved.number;
+      fullNumber = reserved.fullNumber;
+    }
     
     navigation.navigate('InvoicePreview', {
       invoice: {
@@ -263,7 +301,13 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
         discountValue: discountVal,
         ...totals,
       },
+      isManualNumber, // Pass flag to preview screen
+      manualNumberValue: isManualNumber ? parseInt(number, 10) : undefined,
     });
+
+    // Reset manual number input after navigation
+    setManualInvoiceNumber('');
+    setUseManualNumber(false);
   };
 
   const totals = calculateInvoiceTotals({
@@ -321,6 +365,50 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
               <Text style={styles.noOutletText}>Please select an outlet to continue</Text>
             </View>
           )}
+        </View>
+
+        {/* Invoice Number Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Invoice Number</Text>
+          <View style={styles.invoiceNumberCard}>
+            <View style={styles.invoiceNumberRow}>
+              <Text style={styles.invoiceNumberLabel}>Next Auto Number:</Text>
+              <Text style={styles.invoiceNumberValue}>{nextAutoNumber || 'Loading...'}</Text>
+            </View>
+            
+            <View style={styles.manualNumberToggle}>
+              <View style={styles.manualNumberInfo}>
+                <Text style={styles.manualNumberLabel}>Use Manual Number</Text>
+                <Text style={styles.manualNumberHint}>For re-billing or corrections</Text>
+              </View>
+              <Switch
+                value={useManualNumber}
+                onValueChange={setUseManualNumber}
+                trackColor={{ false: theme.border, true: theme.primary }}
+                thumbColor={useManualNumber ? theme.text.inverse : theme.border}
+              />
+            </View>
+            
+            {useManualNumber && (
+              <View style={styles.manualNumberInput}>
+                <Text style={styles.inputLabel}>Enter Invoice Number (without prefix)</Text>
+                <View style={styles.manualNumberInputRow}>
+                  <Text style={styles.prefixText}>{companySettings?.invoicePrefix || 'INV'}-</Text>
+                  <TextInput
+                    style={styles.numberInput}
+                    value={manualInvoiceNumber}
+                    onChangeText={setManualInvoiceNumber}
+                    placeholder="e.g., 50"
+                    placeholderTextColor={theme.text.light}
+                    keyboardType="number-pad"
+                  />
+                </View>
+                <Text style={styles.manualNumberWarning}>
+                  ⚠️ Using a manual number will not affect the auto-counter unless it's higher
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
 
         <View style={styles.section}>
@@ -1132,6 +1220,83 @@ const getStyles = (theme: any) => StyleSheet.create({
     fontSize: 11,
     color: theme.text.secondary,
     marginTop: 2,
+  },
+  invoiceNumberCard: {
+    backgroundColor: theme.surface,
+    borderRadius: 8,
+    padding: 15,
+    borderWidth: 1,
+    borderColor: theme.border,
+  },
+  invoiceNumberRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.border,
+  },
+  invoiceNumberLabel: {
+    fontSize: 14,
+    color: theme.text.secondary,
+    fontWeight: '500',
+  },
+  invoiceNumberValue: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: theme.primary,
+  },
+  manualNumberToggle: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  manualNumberInfo: {
+    flex: 1,
+  },
+  manualNumberLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: theme.text.primary,
+  },
+  manualNumberHint: {
+    fontSize: 12,
+    color: theme.text.secondary,
+    marginTop: 2,
+  },
+  manualNumberInput: {
+    marginTop: 15,
+    paddingTop: 15,
+    borderTopWidth: 1,
+    borderTopColor: theme.border,
+  },
+  manualNumberInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  prefixText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.text.primary,
+    marginRight: 4,
+  },
+  numberInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: theme.border,
+    borderRadius: 6,
+    padding: 10,
+    fontSize: 16,
+    backgroundColor: theme.input.background,
+    color: theme.text.primary,
+  },
+  manualNumberWarning: {
+    fontSize: 11,
+    color: theme.warning || '#FF9800',
+    marginTop: 10,
+    fontStyle: 'italic',
   },
 });
 
