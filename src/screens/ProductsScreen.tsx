@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useFocusEffect } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../contexts/ThemeContext';
 import { Product } from '../types/product';
 import { StorageService } from '../services/StorageService';
@@ -18,7 +19,8 @@ import { StockService } from '../services/StockService';
 
 const ProductsScreen = ({ navigation }: any) => {
   const { theme, themeMode } = useTheme();
-  const styles = getStyles(theme);
+  const insets = useSafeAreaInsets();
+  const styles = getStyles(theme, insets.bottom);
   const [products, setProducts] = useState<Product[]>([]);
   const [stockModalVisible, setStockModalVisible] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -209,7 +211,7 @@ const ProductsScreen = ({ navigation }: any) => {
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: any, bottomInset: number = 0) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.background,
@@ -287,7 +289,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   addButton: {
     position: 'absolute',
-    bottom: 20,
+    bottom: 20 + bottomInset, // Add safe area inset to prevent overlap with navigation bar
     right: 20,
     backgroundColor: theme.primary,
     paddingHorizontal: 25,

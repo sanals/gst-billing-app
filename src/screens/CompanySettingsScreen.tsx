@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../contexts/ThemeContext';
 import { CompanySettings } from '../types/company';
 import { CompanySettingsService } from '../services/CompanySettingsService';
@@ -20,7 +21,8 @@ import { useGoogleAuth } from '../contexts/GoogleAuthContext';
 const CompanySettingsScreen = ({ navigation }: any) => {
   const { theme, themeMode } = useTheme();
   const { accessToken } = useGoogleAuth();
-  const styles = getStyles(theme);
+  const insets = useSafeAreaInsets();
+  const styles = getStyles(theme, insets.bottom);
   const [settings, setSettings] = useState<CompanySettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -517,7 +519,7 @@ const CompanySettingsScreen = ({ navigation }: any) => {
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: any, bottomInset: number = 0) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.background,
@@ -585,6 +587,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     right: 0,
     backgroundColor: theme.primary,
     padding: 18,
+    paddingBottom: 18 + bottomInset, // Add safe area inset to prevent overlap with navigation bar
     alignItems: 'center',
   },
   saveButtonDisabled: {

@@ -10,6 +10,7 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useFocusEffect } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../contexts/ThemeContext';
 import { Outlet } from '../types/outlet';
 import { OutletService } from '../services/OutletService';
@@ -21,7 +22,8 @@ type OutletsScreenProps = {
 
 export default function OutletsScreen({ navigation }: OutletsScreenProps) {
   const { theme, themeMode } = useTheme();
-  const styles = getStyles(theme);
+  const insets = useSafeAreaInsets();
+  const styles = getStyles(theme, insets.bottom);
   const [outlets, setOutlets] = useState<Outlet[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -123,7 +125,7 @@ export default function OutletsScreen({ navigation }: OutletsScreenProps) {
   );
 }
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: any, bottomInset: number = 0) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.background,
@@ -208,7 +210,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   addButton: {
     position: 'absolute',
-    bottom: 20,
+    bottom: 20 + bottomInset, // Add safe area inset to prevent overlap with navigation bar
     right: 20,
     backgroundColor: theme.primary,
     paddingHorizontal: 25,

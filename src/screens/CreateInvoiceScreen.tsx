@@ -9,9 +9,11 @@ import {
   Alert,
   Modal,
   Switch,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useFocusEffect } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../contexts/ThemeContext';
 import { Product } from '../types/product';
 import { InvoiceItem } from '../types/invoice';
@@ -26,7 +28,8 @@ import { StockService } from '../services/StockService';
 
 const CreateInvoiceScreen = ({ navigation }: any) => {
   const { theme, themeMode } = useTheme();
-  const styles = getStyles(theme);
+  const insets = useSafeAreaInsets();
+  const styles = getStyles(theme, insets.bottom);
   // Product & Items
   const [products, setProducts] = useState<Product[]>([]);
   const [invoiceItems, setInvoiceItems] = useState<InvoiceItem[]>([]);
@@ -55,6 +58,10 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
   // UI
   const [showProductPicker, setShowProductPicker] = useState(false);
   const [showOutletPicker, setShowOutletPicker] = useState(false);
+  
+  // Search
+  const [productSearch, setProductSearch] = useState('');
+  const [outletSearch, setOutletSearch] = useState('');
 
   useEffect(() => {
     loadProducts();
@@ -98,6 +105,27 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
     setNextAutoNumber(fullNumber);
   };
 
+  // Filter products based on search
+  const filteredProducts = products.filter((product) => {
+    if (!productSearch.trim()) return true;
+    const search = productSearch.toLowerCase().trim();
+    return (
+      product.name.toLowerCase().includes(search) ||
+      product.hsnCode.toLowerCase().includes(search)
+    );
+  });
+
+  // Filter outlets based on search
+  const filteredOutlets = outlets.filter((outlet) => {
+    if (!outletSearch.trim()) return true;
+    const search = outletSearch.toLowerCase().trim();
+    return (
+      outlet.name.toLowerCase().includes(search) ||
+      outlet.address.toLowerCase().includes(search) ||
+      (outlet.gstNo && outlet.gstNo.toLowerCase().includes(search))
+    );
+  });
+
   const addProduct = (product: Product) => {
     // Check if product already exists in invoice items
     const productExists = invoiceItems.some(item => item.product.id === product.id);
@@ -112,6 +140,7 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
       actualQuantity: 0,
       billedQuantity: 0,
       unitPrice: product.basePrice,
+      rotPercent: product.gstRate, // Rate of Tax (GST percentage) for display
       taxableAmount: 0,
       cgstAmount: 0,
       sgstAmount: 0,
@@ -171,7 +200,7 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
         items.map(item => {
           if (item.id !== itemId) return item;
           const calculated = calculateLineItem(item.product, item.billedQuantity, 0);
-          return { ...item, unitPrice: 0, ...calculated };
+          return { ...item, ...calculated }; // calculateLineItem already includes unitPrice
         })
       );
       return;
@@ -194,7 +223,7 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
         if (item.id !== itemId) return item;
 
         const calculated = calculateLineItem(item.product, item.billedQuantity, price);
-        return { ...item, unitPrice: price, ...calculated };
+        return { ...item, ...calculated }; // calculateLineItem already includes unitPrice
       })
     );
   };
@@ -649,16 +678,49 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
       </TouchableOpacity>
 
       <Modal visible={showProductPicker} animationType="slide" transparent>
-        <View style={styles.modalContainer}>
+        <KeyboardAvoidingView 
+          style={styles.modalContainer}
+          behavior="padding"
+          keyboardVerticalOffset={0}
+        >
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select Product</Text>
-              <TouchableOpacity onPress={() => setShowProductPicker(false)}>
+              <TouchableOpacity onPress={() => { setShowProductPicker(false); setProductSearch(''); }}>
                 <Text style={styles.modalClose}>✕</Text>
               </TouchableOpacity>
             </View>
-            <ScrollView>
-              {products.map((product) => {
+            
+            {/* Search Input */}
+            <View style={styles.searchContainer}>
+              <TextInput
+                style={styles.searchInput}
+                value={productSearch}
+                onChangeText={setProductSearch}
+                placeholder="Search by name or HSN code..."
+                placeholderTextColor={theme.text.light}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              {productSearch.length > 0 && (
+                <TouchableOpacity 
+                  style={styles.clearSearchButton}
+                  onPress={() => setProductSearch('')}
+                >
+                  <Text style={styles.clearSearchText}>✕</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            
+            {/* Results count */}
+            {productSearch.length > 0 && (
+              <Text style={styles.searchResultCount}>
+                {filteredProducts.length} of {products.length} products
+              </Text>
+            )}
+            
+            <ScrollView keyboardShouldPersistTaps="handled">
+              {filteredProducts.map((product) => {
                 const isOutOfStock = StockService.isOutOfStock(product.stock);
                 const isLowStock = StockService.isLowStock(product.stock, 10);
                 const stockColor = isOutOfStock 
@@ -699,6 +761,11 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
                   </TouchableOpacity>
                 );
               })}
+              {filteredProducts.length === 0 && products.length > 0 && (
+                <View style={styles.emptyModalContent}>
+                  <Text style={styles.emptyModalText}>No products match "{productSearch}"</Text>
+                </View>
+              )}
               {products.length === 0 && (
                 <View style={styles.emptyModalContent}>
                   <Text style={styles.emptyModalText}>No products added yet</Text>
@@ -706,6 +773,7 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
                     style={styles.addInModalButton}
                     onPress={() => {
                       setShowProductPicker(false);
+                      setProductSearch('');
                       navigation.navigate('AddProduct');
                     }}
                   >
@@ -715,20 +783,53 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
               )}
             </ScrollView>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       <Modal visible={showOutletPicker} animationType="slide" transparent>
-        <View style={styles.modalContainer}>
+        <KeyboardAvoidingView 
+          style={styles.modalContainer}
+          behavior="padding"
+          keyboardVerticalOffset={0}
+        >
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select Outlet</Text>
-              <TouchableOpacity onPress={() => setShowOutletPicker(false)}>
+              <TouchableOpacity onPress={() => { setShowOutletPicker(false); setOutletSearch(''); }}>
                 <Text style={styles.modalClose}>✕</Text>
               </TouchableOpacity>
             </View>
-            <ScrollView>
-              {outlets.map((outlet) => (
+            
+            {/* Search Input */}
+            <View style={styles.searchContainer}>
+              <TextInput
+                style={styles.searchInput}
+                value={outletSearch}
+                onChangeText={setOutletSearch}
+                placeholder="Search by name, address or GST..."
+                placeholderTextColor={theme.text.light}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              {outletSearch.length > 0 && (
+                <TouchableOpacity 
+                  style={styles.clearSearchButton}
+                  onPress={() => setOutletSearch('')}
+                >
+                  <Text style={styles.clearSearchText}>✕</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            
+            {/* Results count */}
+            {outletSearch.length > 0 && (
+              <Text style={styles.searchResultCount}>
+                {filteredOutlets.length} of {outlets.length} outlets
+              </Text>
+            )}
+            
+            <ScrollView keyboardShouldPersistTaps="handled">
+              {filteredOutlets.map((outlet) => (
                 <TouchableOpacity
                   key={outlet.id}
                   style={styles.productOption}
@@ -741,6 +842,11 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
                   )}
                 </TouchableOpacity>
               ))}
+              {filteredOutlets.length === 0 && outlets.length > 0 && (
+                <View style={styles.emptyModalContent}>
+                  <Text style={styles.emptyModalText}>No outlets match "{outletSearch}"</Text>
+                </View>
+              )}
               {outlets.length === 0 && (
                 <View style={styles.emptyModalContent}>
                   <Text style={styles.emptyModalText}>No outlets added yet</Text>
@@ -748,6 +854,7 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
                     style={styles.addInModalButton}
                     onPress={() => {
                       setShowOutletPicker(false);
+                      setOutletSearch('');
                       navigation.navigate('AddOutlet');
                     }}
                   >
@@ -757,13 +864,13 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
               )}
             </ScrollView>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
 };
 
-const getStyles = (theme: any) => StyleSheet.create({
+const getStyles = (theme: any, bottomInset: number = 0) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.background,
@@ -1089,6 +1196,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     right: 0,
     backgroundColor: theme.primary,
     padding: 18,
+    paddingBottom: 18 + bottomInset, // Add safe area inset to prevent overlap with navigation bar
     alignItems: 'center',
   },
   generateButtonText: {
@@ -1148,6 +1256,35 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   productOptionDisabled: {
     opacity: 0.5,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+    backgroundColor: theme.background,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: theme.border,
+  },
+  searchInput: {
+    flex: 1,
+    padding: 12,
+    fontSize: 15,
+    color: theme.text.primary,
+  },
+  clearSearchButton: {
+    padding: 12,
+  },
+  clearSearchText: {
+    fontSize: 16,
+    color: theme.text.light,
+    fontWeight: '600',
+  },
+  searchResultCount: {
+    fontSize: 12,
+    color: theme.text.secondary,
+    marginBottom: 10,
+    paddingHorizontal: 4,
   },
   label: {
     fontSize: 13,
