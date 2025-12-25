@@ -9,9 +9,11 @@ import SettingsScreen from '../screens/SettingsScreen';
 import ProductsScreen from '../screens/ProductsScreen';
 import AddProductScreen from '../screens/AddProductScreen';
 import CreateInvoiceScreen from '../screens/CreateInvoiceScreen';
+import CreateReceiptScreen from '../screens/CreateReceiptScreen';
 import InvoicePreviewScreen from '../screens/InvoicePreviewScreen';
 import CompanySettingsScreen from '../screens/CompanySettingsScreen';
 import SavedInvoicesScreen from '../screens/SavedInvoicesScreen';
+import SavedReceiptsScreen from '../screens/SavedReceiptsScreen';
 import OutletsScreen from '../screens/OutletsScreen';
 import AddOutletScreen from '../screens/AddOutletScreen';
 
@@ -22,9 +24,11 @@ export type RootStackParamList = {
   Products: undefined;
   AddProduct: { onProductAdded?: () => void };
   CreateInvoice: undefined;
+  CreateReceipt: undefined;
   InvoicePreview: { invoice: any };
   CompanySettings: undefined;
   SavedInvoices: undefined;
+  SavedReceipts: undefined;
   Outlets: undefined;
   AddOutlet: { outlet?: any };
 };
@@ -34,7 +38,7 @@ const Stack = createStackNavigator<RootStackParamList>();
 export default function AppNavigator() {
   return (
     <NavigationContainer>
-      <Stack.Navigator 
+      <Stack.Navigator
         initialRouteName="Home"
         screenOptions={{
           headerStyle: {
@@ -46,58 +50,68 @@ export default function AppNavigator() {
           },
         }}
       >
-        <Stack.Screen 
-          name="Home" 
+        <Stack.Screen
+          name="Home"
           component={HomeScreen}
           options={{ headerShown: false }}
         />
-        <Stack.Screen 
-          name="Details" 
+        <Stack.Screen
+          name="Details"
           component={DetailsScreen}
           options={{ headerShown: false }}
         />
-        <Stack.Screen 
-          name="Settings" 
+        <Stack.Screen
+          name="Settings"
           component={SettingsScreen}
           options={{ title: 'Settings' }}
         />
-        <Stack.Screen 
-          name="Products" 
+        <Stack.Screen
+          name="Products"
           component={ProductsScreen}
           options={{ title: 'Manage Products' }}
         />
-        <Stack.Screen 
-          name="AddProduct" 
+        <Stack.Screen
+          name="AddProduct"
           component={AddProductScreen}
           options={{ title: 'Add Product' }}
         />
-        <Stack.Screen 
-          name="CreateInvoice" 
+        <Stack.Screen
+          name="CreateInvoice"
           component={CreateInvoiceScreen}
           options={{ title: 'Create Invoice' }}
         />
-        <Stack.Screen 
-          name="InvoicePreview" 
+        <Stack.Screen
+          name="CreateReceipt"
+          component={CreateReceiptScreen}
+          options={{ title: 'Create Receipt' }}
+        />
+        <Stack.Screen
+          name="InvoicePreview"
           component={InvoicePreviewScreen}
           options={{ title: 'Invoice Preview' }}
         />
-        <Stack.Screen 
-          name="CompanySettings" 
+        <Stack.Screen
+          name="CompanySettings"
           component={CompanySettingsScreen}
           options={{ title: 'Company Settings' }}
         />
-        <Stack.Screen 
-          name="SavedInvoices" 
+        <Stack.Screen
+          name="SavedInvoices"
           component={SavedInvoicesScreen}
           options={{ title: 'Saved Invoices' }}
         />
-        <Stack.Screen 
-          name="Outlets" 
+        <Stack.Screen
+          name="SavedReceipts"
+          component={SavedReceiptsScreen}
+          options={{ title: 'Saved Receipts' }}
+        />
+        <Stack.Screen
+          name="Outlets"
           component={OutletsScreen}
           options={{ title: 'Manage Outlets' }}
         />
-        <Stack.Screen 
-          name="AddOutlet" 
+        <Stack.Screen
+          name="AddOutlet"
           component={AddOutletScreen}
           options={{ title: 'Add Outlet' }}
         />

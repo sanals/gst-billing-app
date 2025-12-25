@@ -21,6 +21,7 @@ export interface CompanySettings {
   email: string;
   bankDetails: BankDetails;
   invoicePrefix: string;
+  receiptPrefix: string;
   logo?: string; // base64 or file path
 }
 
@@ -45,5 +46,6 @@ export const DEFAULT_COMPANY_SETTINGS: CompanySettings = {
     ifscCode: '',
   },
   invoicePrefix: '',
+  receiptPrefix: '',
 };
 

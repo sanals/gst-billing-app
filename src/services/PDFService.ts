@@ -2,6 +2,7 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Invoice } from '../types/invoice';
+import { Receipt } from '../types/receipt';
 import { CompanySettings, DEFAULT_COMPANY_SETTINGS } from '../types/company';
 import { numberToWords } from '../utils/numberToWords';
 import { BackupService } from './BackupService';
@@ -544,6 +545,318 @@ export class PDFService {
     } catch (error) {
       console.error('Share Error:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Generate Receipt Voucher PDF
+   */
+  static async generateReceiptPDF(receipt: Receipt, companySettings: CompanySettings | null = null): Promise<string> {
+    console.log('PDFService: Starting receipt PDF generation');
+
+    const company = companySettings || DEFAULT_COMPANY_SETTINGS;
+    const sealBase64 = SEAL_BASE64;
+
+    // Format date for display (DD/MM/YYYY)
+    const dateParts = receipt.date.split('/');
+    const day = dateParts[0] || '';
+    const month = dateParts[1] || '';
+    const year = dateParts[2] || '';
+
+    // Payment mode display
+    const getCashDisplay = () => receipt.paymentMode === 'CASH' ? 'CASH' : '';
+    const getBankDisplay = () => receipt.paymentMode === 'BANK' ? `BANK - ${receipt.bankName || ''}` : '';
+    const getChequeDisplay = () => receipt.paymentMode === 'CHEQUE' ? `CHEQUE - ${receipt.chequeNumber || ''}` : '';
+    const paymentModeText = getCashDisplay() || getBankDisplay() || getChequeDisplay();
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            @page {
+              margin: 20px;
+              size: A4;
+            }
+            body { 
+              font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+              color: #333;
+              padding: 20px 40px;
+              position: relative;
+            }
+            .header {
+              text-align: center;
+              margin-bottom: 20px;
+            }
+            .company-name {
+              font-size: 24px;
+              font-weight: bold;
+              margin-bottom: 5px;
+              text-transform: uppercase;
+            }
+            .company-details {
+              font-size: 10px;
+              color: #666;
+              margin-bottom: 5px;
+            }
+            .title {
+              font-size: 16px;
+              font-weight: bold;
+              text-transform: uppercase;
+              margin-top: 10px;
+              letter-spacing: 1px;
+            }
+            .divider {
+              border-bottom: 2px solid #000;
+              margin-bottom: 10px;
+            }
+            .info-row {
+              display: flex;
+              justify-content: space-between;
+              margin-bottom: 15px;
+              font-size: 12px;
+              font-weight: bold;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-bottom: 0;
+            }
+            th, td {
+              border: 1px solid #000;
+              padding: 8px;
+              text-align: left;
+              font-size: 12px;
+              vertical-align: top;
+            }
+            .col-label {
+              width: 150px;
+              font-weight: bold;
+              background-color: #f9f9f9;
+              text-transform: uppercase;
+            }
+            .payee-name {
+              font-size: 16px;
+              font-weight: 900;
+              text-transform: uppercase;
+            }
+            .amount-wrapper {
+              display: flex;
+              align-items: center;
+              gap: 5px;
+            }
+            .amount-value {
+              font-size: 20px;
+              font-weight: 900;
+              letter-spacing: 0.5px;
+            }
+            .rupee-symbol {
+              font-family: DejaVu Sans, sans-serif;
+              font-weight: bold;
+              font-size: 18px;
+              margin-right: 2px;
+            }
+            .signature-cell {
+              height: 80px;
+              vertical-align: bottom;
+              position: relative;
+            }
+            .seal {
+              position: absolute; 
+              bottom: 10px; 
+              right: 20px; 
+              width: 90px; 
+              height: 90px; 
+              transform: rotate(-10deg); 
+              mix-blend-mode: multiply;
+              opacity: 0.8;
+            }
+            .date-boxes {
+              display: inline-flex;
+              gap: 2px;
+            }
+            .date-box {
+              border: 1px solid #000;
+              width: 20px;
+              height: 20px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-size: 12px;
+              font-weight: bold;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="company-name">${company.name}</div>
+            <div class="company-details">
+              ${company.city}, Ph. ${company.mobile1}${company.officePhone ? ', ' + company.officePhone : ''}
+            </div>
+            <div class="title">RECEIPT VOUCHER</div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="info-row">
+            <div>No. ${receipt.fullReceiptNumber}</div>
+            <div class="date-boxes">
+              ${day.split('').map(d => `<div class="date-box">${d}</div>`).join('')}
+              <div class="date-box">/</div>
+              ${month.split('').map(d => `<div class="date-box">${d}</div>`).join('')}
+              <div class="date-box">/</div>
+              ${year.split('').map(d => `<div class="date-box">${d}</div>`).join('')}
+            </div>
+          </div>
+
+          <!-- Main Details Table -->
+          <table>
+            <tr>
+              <td class="col-label">Mode of Payment</td>
+              <td>${receipt.paymentMode}</td>
+            </tr>
+            <tr>
+              <td class="col-label">Cash / Bank / Cheque</td>
+              <td>${paymentModeText}</td>
+            </tr>
+            ${receipt.paymentMode === 'CHEQUE' ? `
+            <tr>
+              <td class="col-label">Cheque Date</td>
+              <td>${receipt.chequeDate || '-'}</td>
+            </tr>
+            ` : ''}
+            <tr>
+              <td class="col-label">Amount in Words</td>
+              <td style="text-transform: capitalize;">${receipt.amountInWords}</td>
+            </tr>
+          </table>
+
+          <!-- Amount/Payee Table (Merged Look) -->
+          <table style="margin-top: -1px; border-top: none;">
+            <tr>
+              <td style="width: 60%; border-top: none; border-right: 1px solid #000;">
+                <div style="font-size: 10px; font-weight: bold; margin-bottom: 5px;">PAYEE:</div>
+                <div class="payee-name">${receipt.payeeName}</div>
+              </td>
+              <td style="width: 40%; border-top: none; vertical-align: middle;">
+                <div style="font-size: 10px; font-weight: bold;">AMOUNT:</div>
+                <div class="amount-wrapper">
+                  <span class="rupee-symbol">₹</span> <span class="amount-value">${receipt.amount.toFixed(2)}</span>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td style="border-right: 1px solid #000;">
+                <div style="font-size: 10px; font-weight: bold; margin-bottom: 5px;">BALANCE AMOUNT</div>
+                <div class="amount-wrapper">
+                  <span class="rupee-symbol">₹</span> <span class="amount-value">${receipt.balanceAmount.toFixed(2)}</span>
+                </div>
+              </td>
+              <td class="signature-cell">
+                <div style="font-size: 10px; font-weight: bold; margin-bottom: 40px;">SIGNATURE:</div>
+                ${sealBase64 ? `<img src="${sealBase64}" alt="Seal" class="seal" />` : ''}
+              </td>
+            </tr>
+          </table>
+        </body>
+      </html>
+    `;
+
+    try {
+      console.log('PDFService: Calling expo-print for receipt...');
+
+      const { uri } = await Print.printToFileAsync({
+        html: htmlContent,
+      });
+
+      console.log('PDFService: Receipt PDF created successfully at:', uri);
+
+      // Save PDF to permanent storage
+      const savedPath = await PDFService.saveReceiptPDF(uri, receipt.fullReceiptNumber);
+      console.log('PDFService: Receipt PDF saved to permanent location:', savedPath);
+
+      return savedPath;
+    } catch (error) {
+      console.error('PDFService: Receipt PDF Generation Error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Saves Receipt PDF to permanent storage in the app's document directory
+   */
+  static async saveReceiptPDF(tempUri: string, receiptNumber: string): Promise<string> {
+    try {
+      // Create receipts directory if it doesn't exist
+      const receiptsDir = `${FileSystem.documentDirectory}receipts/`;
+      const dirInfo = await FileSystem.getInfoAsync(receiptsDir);
+
+      if (!dirInfo.exists) {
+        await FileSystem.makeDirectoryAsync(receiptsDir, { intermediates: true });
+        console.log('PDFService: Created receipts directory');
+      }
+
+      // Generate filename: ReceiptNumber_YYYY-MM-DD.pdf
+      const date = new Date().toISOString().split('T')[0];
+      const fileName = `${receiptNumber.replace(/[^a-zA-Z0-9]/g, '_')}_${date}.pdf`;
+      const savedPath = `${receiptsDir}${fileName}`;
+
+      // Copy from temp location to permanent location
+      await FileSystem.copyAsync({
+        from: tempUri,
+        to: savedPath,
+      });
+
+      console.log('PDFService: Receipt PDF saved successfully to:', savedPath);
+
+      return savedPath;
+    } catch (error) {
+      console.error('PDFService: Error saving receipt PDF:', error);
+      return tempUri;
+    }
+  }
+  /**
+   * Gets list of saved receipt PDFs
+   */
+  static async getSavedReceipts(): Promise<{ uri: string; name: string; modificationTime?: number; size?: number }[]> {
+    try {
+      const receiptsDir = `${FileSystem.documentDirectory}receipts/`;
+      const dirInfo = await FileSystem.getInfoAsync(receiptsDir);
+
+      if (!dirInfo.exists) {
+        return [];
+      }
+
+      const files = await FileSystem.readDirectoryAsync(receiptsDir);
+
+      const fileInfos: { uri: string; name: string; modificationTime?: number; size?: number }[] = [];
+
+      for (const file of files) {
+        if (file.endsWith('.pdf')) {
+          const uri = receiptsDir + file;
+          const info = await FileSystem.getInfoAsync(uri);
+          if (info.exists) {
+            fileInfos.push({
+              uri,
+              name: file,
+              modificationTime: info.modificationTime,
+              size: info.size,
+            });
+          }
+        }
+      }
+
+      return fileInfos
+        .sort((a, b) => {
+          const aTime = a.modificationTime || 0;
+          const bTime = b.modificationTime || 0;
+          return bTime - aTime; // Newest first
+        });
+    } catch (error) {
+      console.error('PDFService: Error getting saved receipts:', error);
+      return [];
     }
   }
 }

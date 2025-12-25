@@ -1,8 +1,8 @@
 import React from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
+import {
+  View,
+  Text,
+  StyleSheet,
   TouchableOpacity,
   ScrollView
 } from 'react-native';
@@ -19,12 +19,12 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
   const { theme, themeMode } = useTheme();
   const styles = getStyles(theme);
 
-  const QuickActionButton = ({ 
-    icon, 
-    title, 
-    subtitle, 
-    onPress, 
-    primary = false 
+  const QuickActionButton = ({
+    icon,
+    title,
+    subtitle,
+    onPress,
+    primary = false
   }: {
     icon: string;
     title: string;
@@ -32,7 +32,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
     onPress: () => void;
     primary?: boolean;
   }) => (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={[styles.quickActionCard, primary && styles.quickActionCardPrimary]}
       onPress={onPress}
       activeOpacity={0.7}
@@ -54,16 +54,16 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
     </TouchableOpacity>
   );
 
-  const MenuButton = ({ 
-    icon, 
-    title, 
-    onPress 
+  const MenuButton = ({
+    icon,
+    title,
+    onPress
   }: {
     icon: string;
     title: string;
     onPress: () => void;
   }) => (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={styles.menuButton}
       onPress={onPress}
       activeOpacity={0.7}
@@ -76,25 +76,43 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
   return (
     <View style={styles.container}>
       <StatusBar style={themeMode === 'dark' ? 'light' : 'dark'} />
-      
+
       <View style={styles.header}>
         <Text style={styles.title}>GST Billing</Text>
       </View>
 
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Quick Actions Section */}
+        {/* Quick Actions Section - Invoice and Receipt side by side */}
         <View style={styles.section}>
-          <QuickActionButton
-            icon="📄"
-            title="Create New Invoice"
-            subtitle="Generate GST invoice"
-            onPress={() => navigation.navigate('CreateInvoice')}
-            primary={true}
-          />
+          <View style={styles.quickActionsRow}>
+            <TouchableOpacity
+              style={styles.compactActionCard}
+              onPress={() => navigation.navigate('CreateInvoice')}
+              activeOpacity={0.7}
+            >
+              <View style={styles.compactActionIcon}>
+                <Text style={styles.compactActionIconText}>📄</Text>
+              </View>
+              <Text style={styles.compactActionTitle}>New Invoice</Text>
+              <Text style={styles.compactActionSubtitle}>GST Invoice</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.compactActionCard, styles.compactActionCardReceipt]}
+              onPress={() => navigation.navigate('CreateReceipt')}
+              activeOpacity={0.7}
+            >
+              <View style={styles.compactActionIcon}>
+                <Text style={styles.compactActionIconText}>🧾</Text>
+              </View>
+              <Text style={styles.compactActionTitle}>New Receipt</Text>
+              <Text style={styles.compactActionSubtitle}>Payment Receipt</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Management Section */}
@@ -119,6 +137,11 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
               icon="📋"
               title="Invoices"
               onPress={() => navigation.navigate('SavedInvoices')}
+            />
+            <MenuButton
+              icon="🗂️"
+              title="Receipts"
+              onPress={() => navigation.navigate('SavedReceipts')}
             />
           </View>
         </View>
@@ -262,6 +285,49 @@ const getStyles = (theme: any) => StyleSheet.create({
     fontWeight: '600',
     color: theme.text.primary,
     textAlign: 'center',
+  },
+  quickActionsRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  compactActionCard: {
+    flex: 1,
+    backgroundColor: theme.success,
+    borderRadius: 16,
+    padding: 16,
+    alignItems: 'center',
+    shadowColor: theme.success,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  compactActionCardReceipt: {
+    backgroundColor: theme.primary,
+    shadowColor: theme.primary,
+  },
+  compactActionIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  compactActionIconText: {
+    fontSize: 24,
+  },
+  compactActionTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: theme.text.inverse,
+    marginBottom: 2,
+  },
+  compactActionSubtitle: {
+    fontSize: 11,
+    color: theme.text.inverse,
+    opacity: 0.85,
   },
 });
 

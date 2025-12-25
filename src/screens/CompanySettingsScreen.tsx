@@ -16,6 +16,7 @@ import { CompanySettings } from '../types/company';
 import { CompanySettingsService } from '../services/CompanySettingsService';
 import { BackupService } from '../services/BackupService';
 import { InvoiceCounterService } from '../services/InvoiceCounterService';
+import { ReceiptCounterService } from '../services/ReceiptCounterService';
 import { useGoogleAuth } from '../contexts/GoogleAuthContext';
 
 const CompanySettingsScreen = ({ navigation }: any) => {
@@ -26,20 +27,30 @@ const CompanySettingsScreen = ({ navigation }: any) => {
   const [settings, setSettings] = useState<CompanySettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  // Invoice Counter State
   const [currentCounter, setCurrentCounter] = useState<number>(0);
   const [newCounterValue, setNewCounterValue] = useState<string>('');
   const [savingCounter, setSavingCounter] = useState(false);
+
+  // Receipt Counter State
+  const [currentReceiptCounter, setCurrentReceiptCounter] = useState<number>(0);
+  const [newReceiptCounterValue, setNewReceiptCounterValue] = useState<string>('');
+  const [savingReceiptCounter, setSavingReceiptCounter] = useState(false);
 
   useEffect(() => {
     loadSettings();
   }, []);
 
-  // Load counter when settings change (to get the prefix)
+  // Load counters when settings change (to get the prefixes)
   useEffect(() => {
     if (settings?.invoicePrefix) {
       loadCurrentCounter();
     }
-  }, [settings?.invoicePrefix]);
+    if (settings?.receiptPrefix) {
+      loadCurrentReceiptCounter();
+    }
+  }, [settings?.invoicePrefix, settings?.receiptPrefix]);
 
   const loadSettings = async () => {
     try {
@@ -58,13 +69,23 @@ const CompanySettingsScreen = ({ navigation }: any) => {
       const counter = await InvoiceCounterService.getCurrentCounter(settings.invoicePrefix);
       setCurrentCounter(counter);
     } catch (error) {
-      console.error('Error loading counter:', error);
+      console.error('Error loading invoice counter:', error);
+    }
+  };
+
+  const loadCurrentReceiptCounter = async () => {
+    if (!settings?.receiptPrefix) return;
+    try {
+      const counter = await ReceiptCounterService.getCurrentCounter(settings.receiptPrefix);
+      setCurrentReceiptCounter(counter);
+    } catch (error) {
+      console.error('Error loading receipt counter:', error);
     }
   };
 
   const handleSetCounter = async () => {
     if (!settings?.invoicePrefix) return;
-    
+
     const newValue = parseInt(newCounterValue.trim(), 10);
     if (isNaN(newValue) || newValue < 0) {
       Alert.alert('Invalid Value', 'Please enter a valid positive number');
@@ -90,6 +111,41 @@ const CompanySettingsScreen = ({ navigation }: any) => {
               Alert.alert('Error', 'Failed to update counter');
             } finally {
               setSavingCounter(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleSetReceiptCounter = async () => {
+    if (!settings?.receiptPrefix) return;
+
+    const newValue = parseInt(newReceiptCounterValue.trim(), 10);
+    if (isNaN(newValue) || newValue < 0) {
+      Alert.alert('Invalid Value', 'Please enter a valid positive number');
+      return;
+    }
+
+    Alert.alert(
+      'Confirm Receipt Counter Change',
+      `This will set the last used receipt number to ${newValue}.\n\nThe next receipt will be ${settings.receiptPrefix}-${newValue + 1}.\n\nAre you sure?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Confirm',
+          style: 'destructive',
+          onPress: async () => {
+            setSavingReceiptCounter(true);
+            try {
+              await ReceiptCounterService.setCounter(settings.receiptPrefix, newValue);
+              setCurrentReceiptCounter(newValue);
+              setNewReceiptCounterValue('');
+              Alert.alert('Success', `Receipt counter updated. Next receipt will be ${settings.receiptPrefix}-${newValue + 1}`);
+            } catch (error) {
+              Alert.alert('Error', 'Failed to update receipt counter');
+            } finally {
+              setSavingReceiptCounter(false);
             }
           },
         },
@@ -134,7 +190,7 @@ const CompanySettingsScreen = ({ navigation }: any) => {
     setSaving(true);
     try {
       await CompanySettingsService.saveSettings(settings);
-      
+
       // Check if auto-sync is enabled and sync to Google Drive
       const autoSyncEnabled = await BackupService.isAutoSyncEnabled();
       if (autoSyncEnabled && accessToken) {
@@ -146,7 +202,7 @@ const CompanySettingsScreen = ({ navigation }: any) => {
           // Don't show error to user, just log it
         }
       }
-      
+
       Alert.alert('Success', 'Company settings saved successfully', [
         { text: 'OK', onPress: () => navigation.goBack() },
       ]);
@@ -242,14 +298,14 @@ const CompanySettingsScreen = ({ navigation }: any) => {
   return (
     <View style={styles.container}>
       <StatusBar style={themeMode === 'dark' ? 'light' : 'dark'} />
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
       >
         {/* Company Details Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Company Details</Text>
-          
+
           <Text style={styles.label}>Company Name *</Text>
           <TextInput
             style={styles.input}
@@ -341,7 +397,7 @@ const CompanySettingsScreen = ({ navigation }: any) => {
         {/* Contact Details Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Contact Details</Text>
-          
+
           <Text style={styles.label}>Mobile Number 1 *</Text>
           <TextInput
             style={styles.input}
@@ -387,7 +443,7 @@ const CompanySettingsScreen = ({ navigation }: any) => {
         {/* Bank Details Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Bank Details</Text>
-          
+
           <Text style={styles.label}>Account Holder Name *</Text>
           <TextInput
             style={styles.input}
@@ -439,7 +495,7 @@ const CompanySettingsScreen = ({ navigation }: any) => {
         {/* Invoice Settings Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Invoice Settings</Text>
-          
+
           <Text style={styles.label}>Invoice Prefix *</Text>
           <TextInput
             style={styles.input}
@@ -452,12 +508,25 @@ const CompanySettingsScreen = ({ navigation }: any) => {
           <Text style={styles.hint}>
             This prefix will be added to all invoice numbers (e.g., KTMVS-101)
           </Text>
+
+          <Text style={styles.label}>Receipt Prefix *</Text>
+          <TextInput
+            style={styles.input}
+            value={settings.receiptPrefix}
+            onChangeText={(text) => updateField('receiptPrefix', text.toUpperCase())}
+            placeholder="REC"
+            autoCapitalize="characters"
+            placeholderTextColor={theme.text.light}
+          />
+          <Text style={styles.hint}>
+            This prefix will be added to all receipts (e.g., REC-101)
+          </Text>
         </View>
 
         {/* Invoice Counter Management Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Invoice Counter</Text>
-          
+
           <View style={styles.counterCard}>
             <View style={styles.counterInfo}>
               <Text style={styles.counterLabel}>Current Counter</Text>
@@ -499,6 +568,55 @@ const CompanySettingsScreen = ({ navigation }: any) => {
             </View>
             <Text style={styles.warningText}>
               ⚠️ Be careful! Setting this to {newCounterValue || '50'} means the next invoice will be {settings.invoicePrefix}-{(parseInt(newCounterValue, 10) || 50) + 1}
+            </Text>
+          </View>
+        </View>
+
+        {/* Receipt Counter Management Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Receipt Counter</Text>
+
+          <View style={styles.counterCard}>
+            <View style={styles.counterInfo}>
+              <Text style={styles.counterLabel}>Current Counter</Text>
+              <Text style={styles.counterValue}>{currentReceiptCounter}</Text>
+              <Text style={styles.counterHint}>
+                Last used: {settings.receiptPrefix}-{currentReceiptCounter}
+              </Text>
+              <Text style={styles.counterHint}>
+                Next receipt: {settings.receiptPrefix}-{currentReceiptCounter + 1}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.counterSetSection}>
+            <Text style={styles.label}>Set Counter Value</Text>
+            <Text style={styles.hint}>
+              Use this to set a starting number when reinstalling the app or to correct the counter
+            </Text>
+            <View style={styles.counterInputRow}>
+              <TextInput
+                style={styles.counterInput}
+                value={newReceiptCounterValue}
+                onChangeText={setNewReceiptCounterValue}
+                placeholder="e.g., 100"
+                keyboardType="number-pad"
+                placeholderTextColor={theme.text.light}
+              />
+              <TouchableOpacity
+                style={[styles.setCounterButton, savingReceiptCounter && styles.buttonDisabled]}
+                onPress={handleSetReceiptCounter}
+                disabled={savingReceiptCounter || !newReceiptCounterValue.trim()}
+              >
+                {savingReceiptCounter ? (
+                  <ActivityIndicator color={theme.text.inverse} size="small" />
+                ) : (
+                  <Text style={styles.setCounterButtonText}>Set</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.warningText}>
+              ⚠️ Be careful! Setting this to {newReceiptCounterValue || '50'} means the next receipt will be {settings.receiptPrefix}-{(parseInt(newReceiptCounterValue, 10) || 50) + 1}
             </Text>
           </View>
         </View>
