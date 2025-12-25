@@ -145,7 +145,7 @@ export class PDFService {
               align-items: flex-end;
               justify-content: space-between;
               gap: 20px;
-              margin: 20px 0;
+              margin: 20px 0 0 0;
             }
             .amount-words {
               padding: 15px;
@@ -174,9 +174,8 @@ export class PDFService {
               display: flex;
               align-items: flex-start;
               gap: 20px;
-              margin: 20px 0;
+              margin: 20px 0 0 0;
               page-break-inside: avoid;
-              padding-top: 15px;
             }
             .bank-details {
               display: flex;
@@ -184,8 +183,7 @@ export class PDFService {
               padding: 15px;
               background-color: #f9f9f9;
               border: 1px solid #333;
-              width: 50%;
-              flex-shrink: 0;
+              flex: 1;
             }
             .bank-left {
               width: 140px;
@@ -222,7 +220,8 @@ export class PDFService {
               font-size: 12px;
             }
             .signature-section {
-              flex: 1;
+              width: 350px;
+              flex-shrink: 0;
               text-align: right;
               margin-top: 60px;
               padding-top: 10px;
