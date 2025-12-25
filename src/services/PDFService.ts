@@ -658,20 +658,26 @@ export class PDFService {
               font-size: 18px;
               margin-right: 2px;
             }
+            .footer-cell {
+              height: 60px;
+              vertical-align: middle;
+            }
             .signature-cell {
-              height: 80px;
+              height: 60px;
               vertical-align: bottom;
               position: relative;
             }
             .seal {
               position: absolute; 
-              bottom: 10px; 
-              right: 20px; 
+              bottom: -20px; 
+              right: 10px; 
               width: 90px; 
               height: 90px; 
               transform: rotate(-10deg); 
               mix-blend-mode: multiply;
               opacity: 0.8;
+              z-index: 10;
+              pointer-events: none;
             }
             .date-boxes {
               display: inline-flex;
@@ -736,11 +742,11 @@ export class PDFService {
           <!-- Amount/Payee Table (Merged Look) -->
           <table style="margin-top: -1px; border-top: none;">
             <tr>
-              <td style="width: 60%; border-top: none; border-right: 1px solid #000;">
+              <td class="footer-cell" style="width: 60%; border-top: none; border-right: 1px solid #000;">
                 <div style="font-size: 10px; font-weight: bold; margin-bottom: 5px;">PAYEE:</div>
                 <div class="payee-name">${receipt.payeeName}</div>
               </td>
-              <td style="width: 40%; border-top: none; vertical-align: middle;">
+              <td class="footer-cell" style="width: 40%; border-top: none; vertical-align: middle;">
                 <div style="font-size: 10px; font-weight: bold;">AMOUNT:</div>
                 <div class="amount-wrapper">
                   <span class="rupee-symbol">₹</span> <span class="amount-value">${receipt.amount.toFixed(2)}</span>
@@ -748,14 +754,14 @@ export class PDFService {
               </td>
             </tr>
             <tr>
-              <td style="border-right: 1px solid #000;">
+              <td class="footer-cell" style="border-right: 1px solid #000;">
                 <div style="font-size: 10px; font-weight: bold; margin-bottom: 5px;">BALANCE AMOUNT</div>
                 <div class="amount-wrapper">
                   <span class="rupee-symbol">₹</span> <span class="amount-value">${receipt.balanceAmount.toFixed(2)}</span>
                 </div>
               </td>
               <td class="signature-cell">
-                <div style="font-size: 10px; font-weight: bold; margin-bottom: 40px;">SIGNATURE:</div>
+                <div style="font-size: 10px; font-weight: bold; margin-bottom: 15px;">SIGNATURE:</div>
                 ${sealBase64 ? `<img src="${sealBase64}" alt="Seal" class="seal" />` : ''}
               </td>
             </tr>
