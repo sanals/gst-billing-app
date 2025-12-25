@@ -11,14 +11,14 @@ export class PDFService {
   static async generateInvoicePDF(invoice: Invoice, companySettings: CompanySettings | null = null): Promise<string> {
     console.log('PDFService: Starting invoice PDF generation');
     console.log('PDFService: Invoice has', invoice.items.length, 'items');
-    
+
     const company = companySettings || DEFAULT_COMPANY_SETTINGS;
-    
+
     // Use pre-embedded base64 images (generated from assets at build time)
     const logoBase64 = LOGO_BASE64;
     const qrCodeBase64 = QRCODE_BASE64;
     const sealBase64 = SEAL_BASE64;
-    
+
     const htmlContent = `
       <!DOCTYPE html>
       <html>
@@ -35,7 +35,7 @@ export class PDFService {
               font-family: Arial, sans-serif; 
               padding: 20px;
               padding-top: 15px;
-              background-color: #FFF9E6;
+              background-color: #FFFFFF;
               font-size: 12px;
             }
             .header { 
@@ -140,10 +140,26 @@ export class PDFService {
             td { text-align: center; }
             td.left { text-align: left; }
             td.right { text-align: right; }
+            .totals-container {
+              display: flex;
+              align-items: flex-end;
+              justify-content: space-between;
+              gap: 20px;
+              margin: 20px 0;
+            }
+            .amount-words {
+              padding: 15px;
+              background-color: #fff;
+              border: 2px dashed #fbbf24;
+              font-style: italic;
+              flex: 1;
+              margin: 0;
+            }
             .totals-table {
-              margin-left: auto;
               width: 350px;
               border: 2px solid #333;
+              flex-shrink: 0;
+              margin: 0;
             }
             .totals-table td {
               padding: 8px 12px;
@@ -153,13 +169,6 @@ export class PDFService {
               color: white;
               font-size: 16px;
               font-weight: bold;
-            }
-            .amount-words {
-              margin: 20px 0;
-              padding: 15px;
-              background-color: #fff;
-              border: 2px dashed #fbbf24;
-              font-style: italic;
             }
             .bank-and-signature-container {
               display: flex;
@@ -324,44 +333,46 @@ export class PDFService {
             </tbody>
           </table>
 
-          <table class="totals-table">
-            <tr>
-              <td class="left">Subtotal (Taxable Amount):</td>
-              <td class="right"><strong>₹${invoice.subtotal.toFixed(2)}</strong></td>
-            </tr>
-            ${invoice.discountType !== 'none' && invoice.discountAmount > 0 ? `
-            <tr class="discount-row">
-              <td class="left">Discount (${invoice.discountType === 'flat' ? '₹' + invoice.discountValue : invoice.discountValue + '%'}):</td>
-              <td class="right"><strong>-₹${invoice.discountAmount.toFixed(2)}</strong></td>
-            </tr>
-            <tr>
-              <td class="left">After Discount:</td>
-              <td class="right"><strong>₹${invoice.subtotalAfterDiscount.toFixed(2)}</strong></td>
-            </tr>
-            ` : ''}
-            <tr>
-              <td class="left">Total CGST:</td>
-              <td class="right"><strong>₹${invoice.totalCGST.toFixed(2)}</strong></td>
-            </tr>
-            <tr>
-              <td class="left">Total SGST:</td>
-              <td class="right"><strong>₹${invoice.totalSGST.toFixed(2)}</strong></td>
-            </tr>
-            ${invoice.roundOff !== 0 ? `
-            <tr class="${invoice.roundOff > 0 ? 'roundoff-positive' : 'roundoff-negative'}">
-              <td class="left">Round Off:</td>
-              <td class="right"><strong>${invoice.roundOff > 0 ? '+' : ''}₹${invoice.roundOff.toFixed(2)}</strong></td>
-            </tr>
-            ` : ''}
-            <tr class="grand-total-row">
-              <td class="left">GRAND TOTAL:</td>
-              <td class="right">₹${invoice.grandTotal.toFixed(2)}</td>
-            </tr>
-          </table>
+          <div class="totals-container">
+            <div class="amount-words">
+              <strong>Total Invoice Amount in Words:</strong><br/>
+              ${numberToWords(invoice.grandTotal)}
+            </div>
 
-          <div class="amount-words">
-            <strong>Total Invoice Amount in Words:</strong><br/>
-            ${numberToWords(invoice.grandTotal)}
+            <table class="totals-table">
+              <tr>
+                <td class="left">Subtotal (Taxable Amount):</td>
+                <td class="right"><strong>₹${invoice.subtotal.toFixed(2)}</strong></td>
+              </tr>
+              ${invoice.discountType !== 'none' && invoice.discountAmount > 0 ? `
+              <tr class="discount-row">
+                <td class="left">Discount (${invoice.discountType === 'flat' ? '₹' + invoice.discountValue : invoice.discountValue + '%'}):</td>
+                <td class="right"><strong>-₹${invoice.discountAmount.toFixed(2)}</strong></td>
+              </tr>
+              <tr>
+                <td class="left">After Discount:</td>
+                <td class="right"><strong>₹${invoice.subtotalAfterDiscount.toFixed(2)}</strong></td>
+              </tr>
+              ` : ''}
+              <tr>
+                <td class="left">Total CGST:</td>
+                <td class="right"><strong>₹${invoice.totalCGST.toFixed(2)}</strong></td>
+              </tr>
+              <tr>
+                <td class="left">Total SGST:</td>
+                <td class="right"><strong>₹${invoice.totalSGST.toFixed(2)}</strong></td>
+              </tr>
+              ${invoice.roundOff !== 0 ? `
+              <tr class="${invoice.roundOff > 0 ? 'roundoff-positive' : 'roundoff-negative'}">
+                <td class="left">Round Off:</td>
+                <td class="right"><strong>${invoice.roundOff > 0 ? '+' : ''}₹${invoice.roundOff.toFixed(2)}</strong></td>
+              </tr>
+              ` : ''}
+              <tr class="grand-total-row">
+                <td class="left">GRAND TOTAL:</td>
+                <td class="right">₹${invoice.grandTotal.toFixed(2)}</td>
+              </tr>
+            </table>
           </div>
 
           <div class="bank-and-signature-container">
@@ -393,17 +404,17 @@ export class PDFService {
     try {
       console.log('PDFService: Calling expo-print...');
       console.log('PDFService: HTML length:', htmlContent.length);
-      
+
       const { uri } = await Print.printToFileAsync({
         html: htmlContent,
       });
-      
+
       console.log('PDFService: PDF created successfully at:', uri);
-      
+
       // Save PDF to permanent storage
       const savedPath = await PDFService.savePDF(uri, invoice.fullInvoiceNumber);
       console.log('PDFService: PDF saved to permanent location:', savedPath);
-      
+
       return savedPath;
     } catch (error) {
       console.error('PDFService: PDF Generation Error:', error);
@@ -426,7 +437,7 @@ export class PDFService {
       // Create invoices directory if it doesn't exist
       const invoicesDir = `${FileSystem.documentDirectory}invoices/`;
       const dirInfo = await FileSystem.getInfoAsync(invoicesDir);
-      
+
       if (!dirInfo.exists) {
         await FileSystem.makeDirectoryAsync(invoicesDir, { intermediates: true });
         console.log('PDFService: Created invoices directory');
@@ -444,7 +455,7 @@ export class PDFService {
       });
 
       console.log('PDFService: PDF saved successfully to:', savedPath);
-      
+
       // Update backup metadata after saving PDF
       try {
         await BackupService.updateBackupMetadata();
@@ -452,7 +463,7 @@ export class PDFService {
         console.log('Failed to update backup metadata:', error);
         // Don't fail PDF generation if backup metadata update fails
       }
-      
+
       return savedPath;
     } catch (error) {
       console.error('PDFService: Error saving PDF:', error);
@@ -469,7 +480,7 @@ export class PDFService {
     try {
       const invoicesDir = `${FileSystem.documentDirectory}invoices/`;
       const dirInfo = await FileSystem.getInfoAsync(invoicesDir);
-      
+
       if (!dirInfo.exists) {
         return [];
       }
@@ -485,7 +496,7 @@ export class PDFService {
 
       // Filter out directories and return only files, sorted by modification time (newest first)
       return fileInfos
-        .filter((info): info is FileSystem.FileInfo & { exists: true; modificationTime?: number } => 
+        .filter((info): info is FileSystem.FileInfo & { exists: true; modificationTime?: number } =>
           info.exists && !info.isDirectory
         )
         .sort((a, b) => {
@@ -520,7 +531,7 @@ export class PDFService {
     try {
       // Check if sharing is available
       const isAvailable = await Sharing.isAvailableAsync();
-      
+
       if (!isAvailable) {
         throw new Error('Sharing is not available on this device');
       }
