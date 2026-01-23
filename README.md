@@ -20,13 +20,61 @@ A comprehensive React Native application for generating GST-compliant invoices w
 
 ## Quick Start
 
-### 1. Install Dependencies
+### 1. PowerShell Execution Policy (Windows)
+
+If you're on Windows, run this **once** in PowerShell to allow scripts to execute:
+
+```powershell
+Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+> **Note**: This is required before `npm install` will work. Using `Bypass` instead of `RemoteSigned` is less secure.
+
+### 2. Install Dependencies
 
 ```bash
 npm install
 ```
 
-### 2. Development Mode
+### 3. First-Time Setup (Required)
+
+Before running the app for the first time, complete these steps:
+
+#### a) Set ANDROID_HOME Environment Variable
+
+Gradle needs to know where your Android SDK is located.
+
+**Find your SDK path:**
+1. Open **Android Studio** → **File** → **Settings**
+2. Go to **Languages & Frameworks** → **Android SDK**
+3. Copy the path shown under **Android SDK Location**
+
+**Option 1: Set permanently (Recommended)**
+
+1. Press `Win + X` → "System" → "Advanced system settings" → "Environment Variables"
+2. Add a new **User variable**:
+   - **Name**: `ANDROID_HOME`
+   - **Value**: Your SDK path (e.g., `C:\Users\YourUsername\AppData\Local\Android\Sdk`)
+3. Restart your terminal.
+
+**Option 2: Create local.properties file**
+
+Create `android/local.properties` with:
+```
+sdk.dir=C:/Users/YourUsername/AppData/Local/Android/Sdk
+```
+
+#### b) Generate PDF Assets
+
+The app embeds logo, QR code, and seal images in the generated PDFs. Run this script to convert them to base64:
+
+```bash
+node scripts/convert-images.js
+```
+
+This creates `src/constants/assets.ts`. Re-run this script whenever you update images in the `assets/` folder.
+
+### 4. Development Mode
 
 For development with hot reload:
 
@@ -38,7 +86,7 @@ npm start
 npm run android
 ```
 
-### 3. Build for Production
+### 5. Build for Production
 
 See [BUILD.md](./BUILD.md) for detailed build instructions.
 
@@ -105,7 +153,11 @@ gst-billing-app/
 
 ### Build Issues
 
-- **"ANDROID_HOME not set"**: Set the environment variable and restart terminal
+- **"SDK location not found"**: 
+  - Set `ANDROID_HOME` environment variable (see First-Time Setup above)
+  - OR create `android/local.properties` with `sdk.dir=C:/Users/YourUsername/AppData/Local/Android/Sdk`
+  - Restart your terminal after setting environment variables
+- **"Unable to resolve '../constants/assets'"**: Run `node scripts/convert-images.js` to generate the assets file
 - **"No connected devices"**: Enable USB debugging on device or start emulator
 - **Build fails**: Ensure Android SDK Platform 33+ and Build-Tools are installed
 
