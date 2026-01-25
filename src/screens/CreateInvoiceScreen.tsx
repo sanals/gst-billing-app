@@ -298,7 +298,8 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
       enableRoundOff,
     });
 
-    // Get invoice number - reserve it atomically to prevent race conditions
+    // Get invoice number - DON'T reserve yet, just preview the next number
+    // The actual reservation happens in InvoicePreviewScreen after successful PDF generation
     const invoicePrefix = companySettings?.invoicePrefix || 'INV';
     let number: string;
     let fullNumber: string;
@@ -315,10 +316,10 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
       fullNumber = `${invoicePrefix}-${manualNum}`;
       isManualNumber = true;
     } else {
-      // Reserve next auto number atomically (prevents skipping)
-      const reserved = await InvoiceCounterService.reserveNextInvoiceNumber(invoicePrefix);
-      number = reserved.number;
-      fullNumber = reserved.fullNumber;
+      // Preview next auto number (without reserving - prevents skipping on failure)
+      const preview = await InvoiceCounterService.getNextInvoiceNumber(invoicePrefix);
+      number = preview.number;
+      fullNumber = preview.fullNumber;
     }
 
     navigation.navigate('InvoicePreview', {

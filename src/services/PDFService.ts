@@ -745,6 +745,7 @@ export class PDFService {
               <td class="footer-cell" style="width: 60%; border-top: none; border-right: 1px solid #000;">
                 <div style="font-size: 10px; font-weight: bold; margin-bottom: 5px;">PAYEE:</div>
                 <div class="payee-name">${receipt.payeeName}</div>
+                ${receipt.payeeAddress ? `<div style="font-size: 11px; color: #444; margin-top: 2px;">${receipt.payeeAddress.split('\n').map(line => line.trim()).filter(line => line).join(', ')}</div>` : ''}
               </td>
               <td class="footer-cell" style="width: 40%; border-top: none; vertical-align: middle;">
                 <div style="font-size: 10px; font-weight: bold;">AMOUNT:</div>

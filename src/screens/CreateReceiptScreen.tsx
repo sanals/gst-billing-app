@@ -159,10 +159,11 @@ export default function CreateReceiptScreen({ navigation }: any) {
         setIsGenerating(true);
 
         try {
-            // Reserve the receipt number
-            const { number, fullNumber } = await ReceiptCounterService.reserveNextReceiptNumber(companySettings.receiptPrefix);
+            // DON'T reserve the number yet - just preview it for the receipt object
+            // The actual reservation happens AFTER successful PDF generation
+            const { number, fullNumber } = await ReceiptCounterService.getNextReceiptNumber(companySettings.receiptPrefix);
 
-            // Create receipt object
+            // Create receipt object (with preview number)
             const receipt: Receipt = {
                 id: Date.now().toString(),
                 receiptNumber: number,
@@ -172,7 +173,7 @@ export default function CreateReceiptScreen({ navigation }: any) {
                 paymentMode,
                 bankName: paymentMode === 'BANK' ? bankName : undefined,
                 chequeNumber: paymentMode === 'CHEQUE' ? chequeNumber : undefined,
-                chequeDate: paymentMode === 'CHEQUE' ? chequeDate : undefined, // Keep as string or ISO? Keeping as string "DD/MM/YYYY" or ISO. Service expects string.
+                chequeDate: paymentMode === 'CHEQUE' ? chequeDate : undefined,
                 payeeName: selectedOutlet.name,
                 payeeAddress: selectedOutlet.address,
                 amount: numAmount,
@@ -181,13 +182,19 @@ export default function CreateReceiptScreen({ navigation }: any) {
                 createdAt: new Date().toISOString(),
             };
 
-            // Generate PDF with timeout
+            // Generate PDF with timeout (30 seconds)
+            const PDF_TIMEOUT_MS = 30000;
             const generatePDFPromise = PDFService.generateReceiptPDF(receipt, companySettings);
-            const timeoutPromise = new Promise((_, reject) =>
-                setTimeout(() => reject(new Error('PDF generation timed out')), 15000)
+            const timeoutPromise = new Promise<never>((_, reject) =>
+                setTimeout(() => reject(new Error('PDF generation timed out. Please try again.')), PDF_TIMEOUT_MS)
             );
 
-            const pdfPath = await Promise.race([generatePDFPromise, timeoutPromise]) as string;
+            const pdfPath = await Promise.race([generatePDFPromise, timeoutPromise]);
+
+            // PDF generated successfully - NOW reserve the receipt number
+            // This prevents number skipping if PDF generation fails
+            await ReceiptCounterService.reserveNextReceiptNumber(companySettings.receiptPrefix);
+            console.log(`Receipt number ${fullNumber} reserved after successful PDF generation`);
 
             // Save receipt to storage
             await ReceiptStorageService.saveReceipt(receipt);
@@ -214,7 +221,22 @@ export default function CreateReceiptScreen({ navigation }: any) {
             );
         } catch (error) {
             console.error('Error generating receipt:', error);
-            Alert.alert('Error', 'Failed to generate receipt. Please try again.');
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+            Alert.alert(
+                'Receipt Generation Failed',
+                `${errorMessage}\n\nThe receipt number has NOT been used. You can try again.`,
+                [
+                    {
+                        text: 'Try Again',
+                        onPress: () => handleGenerateReceipt(),
+                    },
+                    {
+                        text: 'Cancel',
+                        style: 'cancel',
+                    },
+                ]
+            );
         } finally {
             setIsGenerating(false);
         }

@@ -22,7 +22,7 @@ import { numberToWords } from '../utils/numberToWords';
 const InvoicePreviewScreen = ({ route, navigation }: any) => {
   const { theme, themeMode } = useTheme();
   const styles = getStyles(theme);
-  const { invoice, isManualNumber, manualNumberValue } = route.params as { 
+  const { invoice, isManualNumber, manualNumberValue } = route.params as {
     invoice: Invoice;
     isManualNumber?: boolean;
     manualNumberValue?: number;
@@ -41,14 +41,45 @@ const InvoicePreviewScreen = ({ route, navigation }: any) => {
 
   const handleGeneratePDF = async () => {
     setGenerating(true);
+
+    // Timeout wrapper to prevent infinite hang
+    const PDF_TIMEOUT_MS = 30000; // 30 seconds timeout
+
+    const generateWithTimeout = async (): Promise<string> => {
+      return new Promise(async (resolve, reject) => {
+        const timeoutId = setTimeout(() => {
+          reject(new Error('PDF generation timed out. Please try again.'));
+        }, PDF_TIMEOUT_MS);
+
+        try {
+          const filePath = await PDFService.generateInvoicePDF(invoice, companySettings);
+          clearTimeout(timeoutId);
+          resolve(filePath);
+        } catch (error) {
+          clearTimeout(timeoutId);
+          reject(error);
+        }
+      });
+    };
+
     try {
       console.log('Starting PDF generation...');
       console.log('Invoice data:', JSON.stringify(invoice, null, 2));
-      
-      const filePath = await PDFService.generateInvoicePDF(invoice, companySettings);
-      
+
+      const filePath = await generateWithTimeout();
+
       console.log('PDF generated successfully at:', filePath);
-      
+
+      // PDF generated successfully - NOW reserve the invoice number
+      // This prevents number skipping if PDF generation fails/times out
+      if (!isManualNumber) {
+        await InvoiceCounterService.reserveNextInvoiceNumber(invoice.invoicePrefix);
+        console.log(`Invoice number ${invoice.fullInvoiceNumber} reserved after successful PDF generation`);
+      } else if (isManualNumber && manualNumberValue) {
+        await InvoiceCounterService.useInvoiceNumber(invoice.invoicePrefix, manualNumberValue);
+        console.log(`Manual invoice number used: ${manualNumberValue}`);
+      }
+
       // Deduct stock for invoice items
       try {
         await StockService.deductStockForInvoice(invoice.items);
@@ -57,20 +88,9 @@ const InvoicePreviewScreen = ({ route, navigation }: any) => {
         console.error('StockService: Error deducting stock:', error);
         // Don't fail invoice generation if stock deduction fails, but log it
       }
-      
-      // Handle invoice counter:
-      // - For auto numbers: already reserved in CreateInvoiceScreen, no action needed
-      // - For manual numbers: update counter if the number is higher
-      if (isManualNumber && manualNumberValue) {
-        await InvoiceCounterService.useInvoiceNumber(invoice.invoicePrefix, manualNumberValue);
-        console.log(`Manual invoice number used: ${manualNumberValue}`);
-      } else {
-        // Counter was already incremented by reserveNextInvoiceNumber in CreateInvoiceScreen
-        console.log(`Invoice number ${invoice.fullInvoiceNumber} was already reserved`);
-      }
-      
+
       setGenerating(false);
-      
+
       Alert.alert(
         'Success',
         `Invoice ${invoice.fullInvoiceNumber} has been saved and generated successfully!`,
@@ -95,9 +115,23 @@ const InvoicePreviewScreen = ({ route, navigation }: any) => {
     } catch (error) {
       console.error('PDF Generation Error:', error);
       setGenerating(false);
+
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
       Alert.alert(
-        'Error', 
-        `Failed to generate invoice: ${error instanceof Error ? error.message : 'Unknown error'}\n\nCheck console for details.`
+        'PDF Generation Failed',
+        `${errorMessage}\n\nThe invoice number has NOT been used. You can try again.`,
+        [
+          {
+            text: 'Try Again',
+            onPress: () => handleGeneratePDF(),
+          },
+          {
+            text: 'Cancel',
+            onPress: () => navigation.goBack(),
+            style: 'cancel',
+          },
+        ]
       );
     }
   };
@@ -111,7 +145,7 @@ const InvoicePreviewScreen = ({ route, navigation }: any) => {
           <Text style={styles.address}>{companySettings?.address1}</Text>
           <Text style={styles.address}>{companySettings?.address2}, {companySettings?.city}-{companySettings?.pincode}</Text>
           <Text style={styles.gstin}>GSTIN/UIN: {companySettings?.gstin}</Text>
-          
+
           <View style={styles.invoiceHeader}>
             <View>
               <Text style={styles.invoiceTitle}>TAX INVOICE</Text>
@@ -169,7 +203,7 @@ const InvoicePreviewScreen = ({ route, navigation }: any) => {
               <Text style={styles.totalLabel}>Subtotal:</Text>
               <Text style={styles.totalValue}>₹{invoice.subtotal}</Text>
             </View>
-            
+
             {/* Discount */}
             {invoice.discountType !== 'none' && invoice.discountAmount > 0 && (
               <>
@@ -185,7 +219,7 @@ const InvoicePreviewScreen = ({ route, navigation }: any) => {
                 </View>
               </>
             )}
-            
+
             <View style={styles.totalRow}>
               <Text style={styles.totalLabel}>Total CGST:</Text>
               <Text style={styles.totalValue}>₹{invoice.totalCGST}</Text>
@@ -194,7 +228,7 @@ const InvoicePreviewScreen = ({ route, navigation }: any) => {
               <Text style={styles.totalLabel}>Total SGST:</Text>
               <Text style={styles.totalValue}>₹{invoice.totalSGST}</Text>
             </View>
-            
+
             {/* Round Off */}
             {invoice.roundOff !== 0 && (
               <View style={styles.totalRow}>
@@ -204,7 +238,7 @@ const InvoicePreviewScreen = ({ route, navigation }: any) => {
                 </Text>
               </View>
             )}
-            
+
             <View style={[styles.totalRow, styles.grandTotal]}>
               <Text style={styles.grandTotalLabel}>Grand Total:</Text>
               <Text style={styles.grandTotalValue}>₹{invoice.grandTotal}</Text>
@@ -248,8 +282,8 @@ const InvoicePreviewScreen = ({ route, navigation }: any) => {
             <View style={styles.signatureSection}>
               <View style={styles.forCompanyContainer}>
                 <Text style={styles.forCompany}>For {companySettings?.name || 'JANAKI ENTERPRISES'}</Text>
-                <Image 
-                  source={require('../../assets/seal.png')} 
+                <Image
+                  source={require('../../assets/seal.png')}
                   style={styles.seal}
                   resizeMode="contain"
                 />
