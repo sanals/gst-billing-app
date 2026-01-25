@@ -79,14 +79,24 @@ const AddProductScreen = ({ navigation, route }: any) => {
       return;
     }
 
+    // Check for duplicate product name
+    const existingProducts = await StorageService.getProducts();
+    const duplicateName = existingProducts.find(
+      p => p.name.toLowerCase().trim() === name.toLowerCase().trim()
+    );
+    if (duplicateName) {
+      Alert.alert('Duplicate Product', `A product with the name "${name}" already exists. Please use a different name.`);
+      return;
+    }
+
     const product = {
       id: Date.now().toString(),
-      name,
+      name: name.trim(),
       hsnCode,
       basePrice: price,
       gstRate,
       unit,
-      stock: stock ? parseInt(stock, 10) : undefined, // Only include stock if provided
+      stock: stock ? parseInt(stock, 10) : 0, // Default to 0 if not provided
     };
 
     try {
@@ -171,7 +181,7 @@ const AddProductScreen = ({ navigation, route }: any) => {
           keyboardType="number-pad"
         />
         <Text style={styles.hintText}>
-          Leave empty if you don't want to track stock for this product
+          Leave empty to start with 0 stock (you can update stock later)
         </Text>
 
         <TouchableOpacity style={styles.saveButton} onPress={handleSave}>

@@ -33,32 +33,32 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
   // Product & Items
   const [products, setProducts] = useState<Product[]>([]);
   const [invoiceItems, setInvoiceItems] = useState<InvoiceItem[]>([]);
-  
+
   // Customer Details
   const [selectedOutlet, setSelectedOutlet] = useState<Outlet | null>(null);
-  
+
   // Outlets
   const [outlets, setOutlets] = useState<Outlet[]>([]);
-  
+
   // Discount
   const [discountType, setDiscountType] = useState<'none' | 'flat' | 'percent'>('none');
   const [discountValue, setDiscountValue] = useState('0');
-  
+
   // Round Off
   const [enableRoundOff, setEnableRoundOff] = useState(true);
-  
+
   // Company Settings
   const [companySettings, setCompanySettings] = useState<CompanySettings | null>(null);
-  
+
   // Invoice Number
   const [manualInvoiceNumber, setManualInvoiceNumber] = useState<string>('');
   const [useManualNumber, setUseManualNumber] = useState(false);
   const [nextAutoNumber, setNextAutoNumber] = useState<string>('');
-  
+
   // UI
   const [showProductPicker, setShowProductPicker] = useState(false);
   const [showOutletPicker, setShowOutletPicker] = useState(false);
-  
+
   // Search
   const [productSearch, setProductSearch] = useState('');
   const [outletSearch, setOutletSearch] = useState('');
@@ -184,6 +184,14 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
         if (item.id !== itemId) return item;
 
         const updated = { ...item, [field]: qty };
+
+        // Auto-populate billedQuantity from actualQuantity when billedQuantity is 0 or empty
+        if (field === 'actualQuantity' && item.billedQuantity === 0) {
+          updated.billedQuantity = qty;
+          const calculated = calculateLineItem(item.product, qty, item.unitPrice);
+          return { ...updated, ...calculated };
+        }
+
         if (field === 'billedQuantity') {
           const calculated = calculateLineItem(item.product, qty, item.unitPrice);
           return { ...updated, ...calculated };
@@ -275,7 +283,7 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
       discountValue: 0,
       enableRoundOff: false,
     });
-    
+
     const discountValidation = validateDiscount(discountType, discountVal, tempTotals.subtotal);
     if (!discountValidation.valid) {
       Alert.alert('Invalid Discount', discountValidation.message || 'Please check discount value');
@@ -312,7 +320,7 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
       number = reserved.number;
       fullNumber = reserved.fullNumber;
     }
-    
+
     navigation.navigate('InvoicePreview', {
       invoice: {
         id: Date.now().toString(),
@@ -349,7 +357,7 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
   return (
     <View style={styles.container}>
       <StatusBar style={themeMode === 'dark' ? 'light' : 'dark'} />
-    <ScrollView style={styles.scrollView}>
+      <ScrollView style={styles.scrollView}>
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Outlet Details</Text>
@@ -404,7 +412,7 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
               <Text style={styles.invoiceNumberLabel}>Next Auto Number:</Text>
               <Text style={styles.invoiceNumberValue}>{nextAutoNumber || 'Loading...'}</Text>
             </View>
-            
+
             <View style={styles.manualNumberToggle}>
               <View style={styles.manualNumberInfo}>
                 <Text style={styles.manualNumberLabel}>Use Manual Number</Text>
@@ -417,7 +425,7 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
                 thumbColor={useManualNumber ? theme.text.inverse : theme.border}
               />
             </View>
-            
+
             {useManualNumber && (
               <View style={styles.manualNumberInput}>
                 <Text style={styles.inputLabel}>Enter Invoice Number (without prefix)</Text>
@@ -478,28 +486,27 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
               <Text style={styles.itemDetail}>
                 HSN: {item.product.hsnCode} | GST: {item.product.gstRate}%
               </Text>
-              
-              {item.product.stock !== undefined && (
-                <View style={styles.stockInfo}>
-                  <Text style={[
-                    styles.stockText,
-                    { 
-                      color: StockService.isOutOfStock(item.product.stock) 
-                        ? theme.error 
-                        : StockService.isLowStock(item.product.stock, 10)
+
+              {/* Always show stock info */}
+              <View style={styles.stockInfo}>
+                <Text style={[
+                  styles.stockText,
+                  {
+                    color: StockService.isOutOfStock(item.product.stock)
+                      ? theme.error
+                      : StockService.isLowStock(item.product.stock, 10)
                         ? theme.warning || '#FF9800'
                         : theme.text.secondary
-                    }
-                  ]}>
-                    Available Stock: {item.product.stock} {item.product.unit}
-                    {item.billedQuantity > item.product.stock && (
-                      <Text style={{ color: theme.error, fontWeight: '700' }}>
-                        {' '}(Insufficient!)
-                      </Text>
-                    )}
-                  </Text>
-                </View>
-              )}
+                  }
+                ]}>
+                  Available Stock: {item.product.stock ?? 0} {item.product.unit}
+                  {item.billedQuantity > (item.product.stock ?? 0) && (
+                    <Text style={{ color: theme.error, fontWeight: '700' }}>
+                      {' '}(Insufficient!)
+                    </Text>
+                  )}
+                </Text>
+              </View>
 
               <View style={styles.inputRow}>
                 <View style={styles.inputGroupSmall}>
@@ -566,7 +573,7 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
         {invoiceItems.length > 0 && (
           <View style={styles.summarySection}>
             <Text style={styles.sectionTitle}>Invoice Summary</Text>
-            
+
             {/* Subtotal */}
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Subtotal:</Text>
@@ -596,7 +603,7 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
                   <Text style={[styles.discountTypeText, discountType === 'percent' && styles.discountTypeTextActive]}>% Percent</Text>
                 </TouchableOpacity>
               </View>
-              
+
               {discountType !== 'none' && (
                 <TextInput
                   style={styles.discountInput}
@@ -678,7 +685,7 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
       </TouchableOpacity>
 
       <Modal visible={showProductPicker} animationType="slide" transparent>
-        <KeyboardAvoidingView 
+        <KeyboardAvoidingView
           style={styles.modalContainer}
           behavior="padding"
           keyboardVerticalOffset={0}
@@ -690,7 +697,7 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
                 <Text style={styles.modalClose}>✕</Text>
               </TouchableOpacity>
             </View>
-            
+
             {/* Search Input */}
             <View style={styles.searchContainer}>
               <TextInput
@@ -703,7 +710,7 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
                 autoCorrect={false}
               />
               {productSearch.length > 0 && (
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.clearSearchButton}
                   onPress={() => setProductSearch('')}
                 >
@@ -711,23 +718,23 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
                 </TouchableOpacity>
               )}
             </View>
-            
+
             {/* Results count */}
             {productSearch.length > 0 && (
               <Text style={styles.searchResultCount}>
                 {filteredProducts.length} of {products.length} products
               </Text>
             )}
-            
+
             <ScrollView keyboardShouldPersistTaps="handled">
               {filteredProducts.map((product) => {
                 const isOutOfStock = StockService.isOutOfStock(product.stock);
                 const isLowStock = StockService.isLowStock(product.stock, 10);
-                const stockColor = isOutOfStock 
-                  ? theme.error 
-                  : isLowStock 
-                  ? theme.warning || '#FF9800'
-                  : theme.success || '#4CAF50';
+                const stockColor = isOutOfStock
+                  ? theme.error
+                  : isLowStock
+                    ? theme.warning || '#FF9800'
+                    : theme.success || '#4CAF50';
 
                 return (
                   <TouchableOpacity
@@ -750,13 +757,12 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
                       <Text style={styles.productOptionDetail}>
                         ₹{product.basePrice}/{product.unit} | GST: {product.gstRate}%
                       </Text>
-                      {product.stock !== undefined && (
-                        <Text style={[styles.productStock, { color: stockColor }]}>
-                          Stock: {product.stock} {product.unit}
-                          {isOutOfStock && ' (Out of Stock)'}
-                          {!isOutOfStock && isLowStock && ' (Low Stock)'}
-                        </Text>
-                      )}
+                      {/* Always show stock info */}
+                      <Text style={[styles.productStock, { color: stockColor }]}>
+                        Stock: {product.stock ?? 0} {product.unit}
+                        {isOutOfStock && ' (Out of Stock)'}
+                        {!isOutOfStock && isLowStock && ' (Low Stock)'}
+                      </Text>
                     </View>
                   </TouchableOpacity>
                 );
@@ -787,7 +793,7 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
       </Modal>
 
       <Modal visible={showOutletPicker} animationType="slide" transparent>
-        <KeyboardAvoidingView 
+        <KeyboardAvoidingView
           style={styles.modalContainer}
           behavior="padding"
           keyboardVerticalOffset={0}
@@ -799,7 +805,7 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
                 <Text style={styles.modalClose}>✕</Text>
               </TouchableOpacity>
             </View>
-            
+
             {/* Search Input */}
             <View style={styles.searchContainer}>
               <TextInput
@@ -812,7 +818,7 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
                 autoCorrect={false}
               />
               {outletSearch.length > 0 && (
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.clearSearchButton}
                   onPress={() => setOutletSearch('')}
                 >
@@ -820,14 +826,14 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
                 </TouchableOpacity>
               )}
             </View>
-            
+
             {/* Results count */}
             {outletSearch.length > 0 && (
               <Text style={styles.searchResultCount}>
                 {filteredOutlets.length} of {outlets.length} outlets
               </Text>
             )}
-            
+
             <ScrollView keyboardShouldPersistTaps="handled">
               {filteredOutlets.map((outlet) => (
                 <TouchableOpacity

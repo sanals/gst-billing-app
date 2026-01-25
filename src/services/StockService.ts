@@ -27,7 +27,7 @@ export class StockService {
 
       for (const item of items) {
         const product = products.find(p => p.id === item.product.id);
-        
+
         // Skip validation if product doesn't have stock tracking enabled
         if (!product || product.stock === undefined) {
           continue;
@@ -76,14 +76,14 @@ export class StockService {
 
       for (const item of items) {
         const productIndex = products.findIndex(p => p.id === item.product.id);
-        
+
         if (productIndex === -1) {
           console.warn(`StockService: Product ${item.product.id} not found`);
           continue;
         }
 
         const product = products[productIndex];
-        
+
         // Skip if product doesn't have stock tracking enabled
         if (product.stock === undefined) {
           continue;
@@ -96,7 +96,7 @@ export class StockService {
           stock: Math.max(0, newStock), // Prevent negative stock
         };
         updated = true;
-        
+
         console.log(
           `StockService: Deducted ${item.billedQuantity} from ${product.name}. ` +
           `Stock: ${product.stock} → ${products[productIndex].stock}`
@@ -123,14 +123,14 @@ export class StockService {
 
       for (const item of items) {
         const productIndex = products.findIndex(p => p.id === item.product.id);
-        
+
         if (productIndex === -1) {
           console.warn(`StockService: Product ${item.product.id} not found`);
           continue;
         }
 
         const product = products[productIndex];
-        
+
         // Skip if product doesn't have stock tracking enabled
         if (product.stock === undefined) {
           continue;
@@ -143,7 +143,7 @@ export class StockService {
           stock: newStock,
         };
         updated = true;
-        
+
         console.log(
           `StockService: Restored ${item.billedQuantity} to ${product.name}. ` +
           `Stock: ${product.stock} → ${products[productIndex].stock}`
@@ -167,7 +167,7 @@ export class StockService {
     try {
       const products = await StorageService.getProducts();
       const productIndex = products.findIndex(p => p.id === productId);
-      
+
       if (productIndex === -1) {
         throw new Error(`Product ${productId} not found`);
       }
@@ -203,16 +203,16 @@ export class StockService {
    * Checks if product is low on stock (less than threshold)
    */
   static isLowStock(stock: number | undefined, threshold: number = 10): boolean {
-    if (stock === undefined) return false;
-    return stock < threshold;
+    const stockValue = stock ?? 0; // Treat undefined as 0
+    return stockValue < threshold;
   }
 
   /**
    * Checks if product is out of stock
    */
   static isOutOfStock(stock: number | undefined): boolean {
-    if (stock === undefined) return false;
-    return stock <= 0;
+    const stockValue = stock ?? 0; // Treat undefined as 0
+    return stockValue <= 0;
   }
 }
 

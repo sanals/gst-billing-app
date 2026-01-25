@@ -99,11 +99,11 @@ const ProductsScreen = ({ navigation }: any) => {
   const renderProduct = ({ item }: { item: Product }) => {
     const isOutOfStock = StockService.isOutOfStock(item.stock);
     const isLowStock = StockService.isLowStock(item.stock, 10);
-    const stockColor = isOutOfStock 
-      ? theme.error 
-      : isLowStock 
-      ? theme.warning || '#FF9800'
-      : theme.success || '#4CAF50';
+    const stockColor = isOutOfStock
+      ? theme.error
+      : isLowStock
+        ? theme.warning || '#FF9800'
+        : theme.success || '#4CAF50';
 
     return (
       <View style={styles.productCard}>
@@ -112,33 +112,31 @@ const ProductsScreen = ({ navigation }: any) => {
           <Text style={styles.productDetails}>
             HSN: {item.hsnCode} | GST: {item.gstRate}% | ₹{item.basePrice}/{item.unit}
           </Text>
-          {item.stock !== undefined && (
-            <View style={styles.stockContainer}>
-              <Text style={[styles.stockLabel, { color: stockColor }]}>
-                Stock: {item.stock} {item.unit}
+          {/* Always show stock info */}
+          <View style={styles.stockContainer}>
+            <Text style={[styles.stockLabel, { color: stockColor }]}>
+              Stock: {item.stock ?? 0} {item.unit}
+            </Text>
+            {isOutOfStock && (
+              <Text style={[styles.stockWarning, { color: theme.error }]}>
+                Out of Stock
               </Text>
-              {isOutOfStock && (
-                <Text style={[styles.stockWarning, { color: theme.error }]}>
-                  Out of Stock
-                </Text>
-              )}
-              {!isOutOfStock && isLowStock && (
-                <Text style={[styles.stockWarning, { color: theme.warning || '#FF9800' }]}>
-                  Low Stock
-                </Text>
-              )}
-            </View>
-          )}
+            )}
+            {!isOutOfStock && isLowStock && (
+              <Text style={[styles.stockWarning, { color: theme.warning || '#FF9800' }]}>
+                Low Stock
+              </Text>
+            )}
+          </View>
         </View>
         <View style={styles.actionButtons}>
-          {item.stock !== undefined && (
-            <TouchableOpacity
-              style={[styles.updateStockButton, { backgroundColor: theme.primary }]}
-              onPress={() => handleUpdateStock(item)}
-            >
-              <Text style={styles.updateStockText}>Update Stock</Text>
-            </TouchableOpacity>
-          )}
+          {/* Always show Update Stock button */}
+          <TouchableOpacity
+            style={[styles.updateStockButton, { backgroundColor: theme.primary }]}
+            onPress={() => handleUpdateStock(item)}
+          >
+            <Text style={styles.updateStockText}>Update Stock</Text>
+          </TouchableOpacity>
           <TouchableOpacity
             style={styles.deleteButton}
             onPress={() => handleDelete(item.id)}
