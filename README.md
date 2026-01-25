@@ -103,6 +103,11 @@ cd android
 
 The APK will be located at: `android/app/build/outputs/apk/release/app-release.apk`
 
+**Full path example (Windows):**
+```
+C:\dev\projects\gst-billing-app\android\app\build\outputs\apk\release\app-release.apk
+```
+
 ## Project Structure
 
 ```
