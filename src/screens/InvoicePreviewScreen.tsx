@@ -8,7 +8,13 @@ import {
   Alert,
   ActivityIndicator,
   Image,
+  Platform,
+  Linking,
+  BackHandler,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as IntentLauncher from 'expo-intent-launcher';
 import { StatusBar } from 'expo-status-bar';
 import { useTheme } from '../contexts/ThemeContext';
 import { Invoice } from '../types/invoice';
@@ -16,6 +22,7 @@ import { CompanySettings } from '../types/company';
 import { PDFService } from '../services/PDFService';
 import { CompanySettingsService } from '../services/CompanySettingsService';
 import { InvoiceCounterService } from '../services/InvoiceCounterService';
+import { InvoiceStorageService } from '../services/InvoiceStorageService';
 import { StockService } from '../services/StockService';
 import { numberToWords } from '../utils/numberToWords';
 
@@ -28,18 +35,49 @@ const InvoicePreviewScreen = ({ route, navigation }: any) => {
     manualNumberValue?: number;
   };
   const [generating, setGenerating] = React.useState(false);
+  const [savedFilePath, setSavedFilePath] = React.useState<string | null>(null);
   const [companySettings, setCompanySettings] = React.useState<CompanySettings | null>(null);
 
   React.useEffect(() => {
     loadCompanySettings();
   }, []);
 
+  React.useEffect(() => {
+    if (savedFilePath) {
+      // Disable the header back button and swipe back gesture
+      navigation.setOptions({
+        headerLeft: () => (
+          <TouchableOpacity
+            onPress={() => navigation.popToTop()}
+            style={{ marginLeft: 15, padding: 5 }}
+          >
+            <Ionicons name="home" size={24} color={theme.text.primary} />
+          </TouchableOpacity>
+        ),
+        gestureEnabled: false,
+      });
+
+      // Override hardware back button to go to Home instead of previous screen
+      const backAction = () => {
+        navigation.popToTop();
+        return true;
+      };
+
+      const backHandler = BackHandler.addEventListener(
+        'hardwareBackPress',
+        backAction
+      );
+
+      return () => backHandler.remove();
+    }
+  }, [savedFilePath, navigation, theme]);
+
   const loadCompanySettings = async () => {
     const settings = await CompanySettingsService.getSettings();
     setCompanySettings(settings);
   };
 
-  const handleGeneratePDF = async () => {
+  const handleGeneratePDF = async (retryCount = 0) => {
     setGenerating(true);
 
     // Timeout wrapper to prevent infinite hang
@@ -62,13 +100,71 @@ const InvoicePreviewScreen = ({ route, navigation }: any) => {
       });
     };
 
+    const showSuccessAlert = (path: string) => {
+      Alert.alert(
+        'Success',
+        `Invoice ${invoice.fullInvoiceNumber} has been saved and generated successfully!`,
+        [
+          {
+            text: 'Share',
+            onPress: async () => {
+              try {
+                await PDFService.sharePDF(path);
+              } catch (error) {
+                Alert.alert('Error', 'Failed to share invoice');
+              }
+            },
+          },
+          {
+            text: 'Open PDF',
+            onPress: async () => {
+              try {
+                if (Platform.OS === 'android') {
+                  const contentUri = await FileSystem.getContentUriAsync(path);
+                  await IntentLauncher.startActivityAsync('android.intent.action.VIEW', {
+                    data: contentUri,
+                    flags: 67108865, // FLAG_ACTIVITY_CLEAR_TOP | FLAG_GRANT_READ_URI_PERMISSION
+                    type: 'application/pdf',
+                  });
+                } else {
+                  await Linking.openURL(path);
+                }
+              } catch (e) {
+                console.error('Error opening PDF:', e);
+                Alert.alert('Error', 'Could not open PDF');
+              }
+            },
+          },
+          {
+            text: 'Done',
+            onPress: () => navigation.popToTop(),
+            style: 'cancel',
+          },
+        ]
+      );
+    };
+
+    if (savedFilePath) {
+      showSuccessAlert(savedFilePath);
+      setGenerating(false);
+      return;
+    }
+
     try {
-      console.log('Starting PDF generation...');
-      console.log('Invoice data:', JSON.stringify(invoice, null, 2));
+      if (retryCount === 0) {
+        console.log('Starting PDF generation...');
+        console.log('Invoice data:', JSON.stringify(invoice, null, 2));
+      } else {
+        console.log(`Retrying PDF generation (Attempt ${retryCount + 1})...`);
+      }
 
       const filePath = await generateWithTimeout();
 
       console.log('PDF generated successfully at:', filePath);
+
+      // Save invoice to storage
+      await InvoiceStorageService.saveInvoice(invoice);
+      console.log('Invoice data saved to storage');
 
       // PDF generated successfully - NOW reserve the invoice number
       // This prevents number skipping if PDF generation fails/times out
@@ -89,31 +185,21 @@ const InvoicePreviewScreen = ({ route, navigation }: any) => {
         // Don't fail invoice generation if stock deduction fails, but log it
       }
 
+      setSavedFilePath(filePath);
       setGenerating(false);
-
-      Alert.alert(
-        'Success',
-        `Invoice ${invoice.fullInvoiceNumber} has been saved and generated successfully!`,
-        [
-          {
-            text: 'Share',
-            onPress: async () => {
-              try {
-                await PDFService.sharePDF(filePath);
-              } catch (error) {
-                Alert.alert('Error', 'Failed to share invoice');
-              }
-            },
-          },
-          {
-            text: 'Done',
-            onPress: () => navigation.popToTop(),
-            style: 'cancel',
-          },
-        ]
-      );
+      showSuccessAlert(filePath);
     } catch (error) {
-      console.error('PDF Generation Error:', error);
+      console.error(`PDF Generation Error (Attempt ${retryCount + 1}):`, error);
+
+      // Retry logic: If it failed and we haven't retried yet, try once more
+      if (retryCount < 1) {
+        console.log('Retrying PDF generation in 500ms...');
+        setTimeout(() => {
+          handleGeneratePDF(retryCount + 1);
+        }, 500);
+        return;
+      }
+
       setGenerating(false);
 
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -124,7 +210,7 @@ const InvoicePreviewScreen = ({ route, navigation }: any) => {
         [
           {
             text: 'Try Again',
-            onPress: () => handleGeneratePDF(),
+            onPress: () => handleGeneratePDF(0), // Reset retry count on manual retry
           },
           {
             text: 'Cancel',
@@ -135,6 +221,7 @@ const InvoicePreviewScreen = ({ route, navigation }: any) => {
       );
     }
   };
+
 
   return (
     <View style={styles.container}>
@@ -297,13 +384,15 @@ const InvoicePreviewScreen = ({ route, navigation }: any) => {
 
       <TouchableOpacity
         style={styles.generateButton}
-        onPress={handleGeneratePDF}
+        onPress={() => handleGeneratePDF(0)}
         disabled={generating}
       >
         {generating ? (
           <ActivityIndicator color={theme.text.inverse} />
         ) : (
-          <Text style={styles.generateButtonText}>Save & Generate PDF</Text>
+          <Text style={styles.generateButtonText}>
+            {savedFilePath ? 'View / Share PDF' : 'Save & Generate PDF'}
+          </Text>
         )}
       </TouchableOpacity>
     </View>

@@ -338,6 +338,7 @@ const CreateInvoiceScreen = ({ navigation }: any) => {
         discountType,
         discountValue: discountVal,
         ...totals,
+        createdAt: new Date().toISOString(),
       },
       isManualNumber, // Pass flag to preview screen
       manualNumberValue: isManualNumber ? parseInt(number, 10) : undefined,

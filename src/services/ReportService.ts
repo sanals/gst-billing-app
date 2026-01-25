@@ -308,3 +308,275 @@ export class ReportService {
         }
     }
 }
+
+// ----------------------------------------------------------------------
+// INVOICE SUMMARY LOGIC
+// ----------------------------------------------------------------------
+
+import { Invoice } from '../types/invoice';
+import { InvoiceStorageService } from './InvoiceStorageService';
+
+export interface InvoiceSummary {
+    startDate: Date;
+    endDate: Date;
+    totalAmount: number;
+    totalCount: number;
+    invoices: Invoice[];
+    filterType: 'today' | 'date' | 'month' | 'custom';
+}
+
+export class InvoiceReportService {
+    /**
+     * Get invoices filtered by date range
+     */
+    static async getInvoicesByDateRange(startDate: Date, endDate: Date): Promise<Invoice[]> {
+        const allInvoices = await InvoiceStorageService.getAllInvoices();
+
+        // Set time bounds for comparison
+        const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+
+        return allInvoices.filter(invoice => {
+            const invoiceDate = new Date(invoice.createdAt);
+            return invoiceDate >= start && invoiceDate <= end;
+        });
+    }
+
+    /**
+     * Get today's invoices
+     */
+    static async getTodayInvoices(): Promise<Invoice[]> {
+        const today = new Date();
+        return this.getInvoicesByDateRange(today, today);
+    }
+
+    /**
+     * Get invoices for a specific month
+     */
+    static async getMonthInvoices(year: number, month: number): Promise<Invoice[]> {
+        const startDate = new Date(year, month, 1);
+        const endDate = new Date(year, month + 1, 0); // Last day of month
+        return this.getInvoicesByDateRange(startDate, endDate);
+    }
+
+    /**
+     * Calculate summary from invoices
+     */
+    static calculateSummary(
+        invoices: Invoice[],
+        startDate: Date,
+        endDate: Date,
+        filterType: 'today' | 'date' | 'month' | 'custom'
+    ): InvoiceSummary {
+        // Calculate total amount (using grandTotal from invoice)
+        const totalAmount = invoices.reduce((sum, inv) => sum + inv.grandTotal, 0);
+
+        return {
+            startDate,
+            endDate,
+            totalAmount,
+            totalCount: invoices.length,
+            invoices: invoices.sort((a, b) =>
+                new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            ),
+            filterType,
+        };
+    }
+
+    /**
+     * Generate Invoice Summary PDF
+     */
+    static async generateSummaryPDF(summary: InvoiceSummary): Promise<string> {
+        const settings = await CompanySettingsService.getSettings();
+        const companyName = settings?.name || 'Company';
+
+        // Use ReportService's helper for labels
+        const dateRangeLabel = ReportService.getDateRangeLabel({
+            ...summary,
+            receipts: [] // Dummy empty array since helper expects ReceiptSummary
+        } as any);
+
+        const generatedAt = new Date().toLocaleString('en-IN');
+
+        // Generate invoice rows (Simplified: No, Invoice No, Date, Company, Amount)
+        const invoiceRows = summary.invoices.map((inv, index) => `
+            <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">${index + 1}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #eee;">${inv.fullInvoiceNumber}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #eee;">${inv.date}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #eee;">${inv.outletName}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">₹${inv.grandTotal.toFixed(2)}</td>
+            </tr>
+        `).join('');
+
+        const html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    padding: 20px;
+                    color: #333;
+                }
+                .header {
+                    text-align: center;
+                    margin-bottom: 30px;
+                    border-bottom: 2px solid #007AFF;
+                    padding-bottom: 15px;
+                }
+                .company-name {
+                    font-size: 24px;
+                    font-weight: bold;
+                    color: #007AFF;
+                    margin-bottom: 5px;
+                }
+                .report-title {
+                    font-size: 18px;
+                    color: #555;
+                }
+                .date-range {
+                    font-size: 16px;
+                    color: #777;
+                    margin-top: 10px;
+                }
+                .summary-box {
+                    display: flex;
+                    justify-content: space-around;
+                    margin: 20px 0;
+                    padding: 20px;
+                    background: #f5f5f5;
+                    border-radius: 8px;
+                }
+                .summary-item {
+                    text-align: center;
+                }
+                .summary-label {
+                    font-size: 12px;
+                    color: #777;
+                    text-transform: uppercase;
+                }
+                .summary-value {
+                    font-size: 24px;
+                    font-weight: bold;
+                    color: #007AFF;
+                }
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-top: 20px;
+                }
+                th {
+                    background: #007AFF;
+                    color: white;
+                    padding: 10px;
+                    text-align: left;
+                }
+                th:nth-child(1) { width: 50px; text-align: center; }
+                th:nth-child(5) { text-align: right; }
+                .footer {
+                    margin-top: 30px;
+                    text-align: center;
+                    font-size: 10px;
+                    color: #999;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <div class="company-name">${companyName}</div>
+                <div class="report-title">Invoice Summary Report</div>
+                <div class="date-range">${dateRangeLabel}</div>
+            </div>
+
+            <div class="summary-box">
+                <div class="summary-item">
+                    <div class="summary-label">Total Invoices</div>
+                    <div class="summary-value">${summary.totalCount}</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">Total Amount</div>
+                    <div class="summary-value">₹${summary.totalAmount.toFixed(2)}</div>
+                </div>
+            </div>
+
+            ${summary.invoices.length > 0 ? `
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Invoice No</th>
+                        <th>Date</th>
+                        <th>Company</th>
+                        <th>Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${invoiceRows}
+                </tbody>
+            </table>
+            ` : '<p style="text-align: center; color: #999;">No invoices found for this period.</p>'}
+
+            <div class="footer">
+                Generated on ${generatedAt}
+            </div>
+        </body>
+        </html>
+        `;
+
+        try {
+            const { uri } = await Print.printToFileAsync({ html });
+
+            // Save to INVOICES folder with descriptive name
+            // IMPORTANT: Must match the directory used in PDFService.getSavedInvoices ('invoices/')
+            const invoicesDir = `${FileSystem.documentDirectory}invoices/`;
+            const dirInfo = await FileSystem.getInfoAsync(invoicesDir);
+            if (!dirInfo.exists) {
+                await FileSystem.makeDirectoryAsync(invoicesDir, { intermediates: true });
+            }
+
+            // Generate filename logic (same as receipts)
+            const formatDateForFilename = (d: Date) => {
+                const year = d.getFullYear();
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            };
+
+            const formatMonthForFilename = (d: Date) => {
+                const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                return `${months[d.getMonth()]}-${d.getFullYear()}`;
+            };
+
+            let dateStr: string;
+            const startDateStr = formatDateForFilename(summary.startDate);
+            const endDateStr = formatDateForFilename(summary.endDate);
+
+            if (summary.filterType === 'month') {
+                dateStr = formatMonthForFilename(summary.startDate);
+            } else if (startDateStr === endDateStr) {
+                dateStr = startDateStr;
+            } else {
+                dateStr = `${startDateStr}_to_${endDateStr}`;
+            }
+
+            // Add timestamp
+            const timestamp = Date.now();
+            const fileName = `Summary_${dateStr}_${timestamp}.pdf`;
+            const newPath = `${invoicesDir}${fileName}`;
+
+            await FileSystem.moveAsync({ from: uri, to: newPath });
+
+            console.log('Invoice Summary PDF saved:', newPath);
+            return newPath;
+        } catch (error) {
+            console.error('Error generating invoice summary PDF:', error);
+            throw error;
+        }
+    }
+}
