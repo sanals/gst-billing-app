@@ -43,7 +43,7 @@ const InvoicePreviewScreen = ({ route, navigation }: any) => {
     setGenerating(true);
 
     // Timeout wrapper to prevent infinite hang
-    const PDF_TIMEOUT_MS = 30000; // 30 seconds timeout
+    const PDF_TIMEOUT_MS = 15000; // 15 seconds timeout
 
     const generateWithTimeout = async (): Promise<string> => {
       return new Promise(async (resolve, reject) => {

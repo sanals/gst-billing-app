@@ -182,8 +182,8 @@ export default function CreateReceiptScreen({ navigation }: any) {
                 createdAt: new Date().toISOString(),
             };
 
-            // Generate PDF with timeout (30 seconds)
-            const PDF_TIMEOUT_MS = 30000;
+            // Generate PDF with timeout (15 seconds)
+            const PDF_TIMEOUT_MS = 15000;
             const generatePDFPromise = PDFService.generateReceiptPDF(receipt, companySettings);
             const timeoutPromise = new Promise<never>((_, reject) =>
                 setTimeout(() => reject(new Error('PDF generation timed out. Please try again.')), PDF_TIMEOUT_MS)
