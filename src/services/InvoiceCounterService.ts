@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const INVOICE_COUNTER_KEY = '@invoice_counter';
 
 interface CounterData {
-  [prefix: string]: number; // e.g., { "KTMVS": 1, "INV": 5 } (stores last used number)
+  [key: string]: number | string;
 }
 
 export class InvoiceCounterService {
@@ -13,21 +13,20 @@ export class InvoiceCounterService {
    * Returns formatted string like "KTMVS-1" (starts from 1)
    */
   static async getNextInvoiceNumber(prefix: string): Promise<{
-    number: string; // Just the number "1"
-    fullNumber: string; // Complete "KTMVS-1"
+    number: string;
+    fullNumber: string;
   }> {
     try {
       const counters = await this.loadCounters();
-      const currentNumber = counters[prefix] || 0; // Start from 0 if not found (first invoice will be 1)
+      const currentNumber = (counters[prefix] as number) || 0;
       const nextNumber = currentNumber + 1;
-      
+
       return {
         number: nextNumber.toString(),
         fullNumber: `${prefix}-${nextNumber}`,
       };
     } catch (error) {
       console.error('Error getting next invoice number:', error);
-      // Return a fallback number
       return {
         number: '1',
         fullNumber: `${prefix}-1`,
@@ -46,15 +45,14 @@ export class InvoiceCounterService {
   }> {
     try {
       const counters = await this.loadCounters();
-      const currentNumber = counters[prefix] || 0;
+      const currentNumber = (counters[prefix] as number) || 0;
       const nextNumber = currentNumber + 1;
-      
-      // Immediately save the incremented counter (atomic reservation)
+
       counters[prefix] = nextNumber;
       await this.saveCounters(counters);
-      
+
       console.log(`Invoice number reserved for ${prefix}: ${nextNumber}`);
-      
+
       return {
         number: nextNumber.toString(),
         fullNumber: `${prefix}-${nextNumber}`,
@@ -72,7 +70,7 @@ export class InvoiceCounterService {
   static async incrementCounter(prefix: string): Promise<void> {
     try {
       const counters = await this.loadCounters();
-      const currentNumber = counters[prefix] || 0;
+      const currentNumber = (counters[prefix] as number) || 0;
       counters[prefix] = currentNumber + 1;
       await this.saveCounters(counters);
       console.log(`Counter incremented for ${prefix}: ${counters[prefix]}`);
@@ -89,9 +87,8 @@ export class InvoiceCounterService {
   static async useInvoiceNumber(prefix: string, number: number): Promise<void> {
     try {
       const counters = await this.loadCounters();
-      const currentNumber = counters[prefix] || 0;
-      
-      // Only update if the used number is higher than current counter
+      const currentNumber = (counters[prefix] as number) || 0;
+
       if (number > currentNumber) {
         counters[prefix] = number;
         await this.saveCounters(counters);
@@ -109,7 +106,7 @@ export class InvoiceCounterService {
   static async getCurrentCounter(prefix: string): Promise<number> {
     try {
       const counters = await this.loadCounters();
-      return counters[prefix] || 0;
+      return (counters[prefix] as number) || 0;
     } catch (error) {
       console.error('Error getting current counter:', error);
       return 0;

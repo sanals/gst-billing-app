@@ -3,22 +3,18 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const RECEIPT_COUNTER_KEY = '@receipt_counter';
 
 interface CounterData {
-    [prefix: string]: number; // e.g., { "REC": 1, "RCPT": 5 } (stores last used number)
+    [key: string]: number | string;
 }
 
 export class ReceiptCounterService {
-    /**
-     * Get the next receipt number for a given prefix (without reserving)
-     * Use this for preview purposes only
-     * Returns formatted string like "REC-1" (starts from 1)
-     */
+
     static async getNextReceiptNumber(prefix: string): Promise<{
-        number: string; // Just the number "1"
-        fullNumber: string; // Complete "REC-1"
+        number: string;
+        fullNumber: string;
     }> {
         try {
             const counters = await this.loadCounters();
-            const currentNumber = counters[prefix] || 0;
+            const currentNumber = (counters[prefix] as number) || 0;
             const nextNumber = currentNumber + 1;
 
             return {
@@ -34,21 +30,15 @@ export class ReceiptCounterService {
         }
     }
 
-    /**
-     * Reserve and return the next receipt number atomically
-     * This prevents race conditions by immediately incrementing the counter
-     * Use this when actually creating a receipt
-     */
     static async reserveNextReceiptNumber(prefix: string): Promise<{
         number: string;
         fullNumber: string;
     }> {
         try {
             const counters = await this.loadCounters();
-            const currentNumber = counters[prefix] || 0;
+            const currentNumber = (counters[prefix] as number) || 0;
             const nextNumber = currentNumber + 1;
 
-            // Immediately save the incremented counter (atomic reservation)
             counters[prefix] = nextNumber;
             await this.saveCounters(counters);
 
@@ -64,23 +54,16 @@ export class ReceiptCounterService {
         }
     }
 
-    /**
-     * Get current counter value without incrementing
-     */
     static async getCurrentCounter(prefix: string): Promise<number> {
         try {
             const counters = await this.loadCounters();
-            return counters[prefix] || 0;
+            return (counters[prefix] as number) || 0;
         } catch (error) {
             console.error('Error getting current counter:', error);
             return 0;
         }
     }
 
-    /**
-     * Set counter to a specific value
-     * Useful for manual adjustments or imports
-     */
     static async setCounter(prefix: string, value: number): Promise<void> {
         try {
             const counters = await this.loadCounters();
@@ -93,9 +76,6 @@ export class ReceiptCounterService {
         }
     }
 
-    /**
-     * Reset counter for a prefix
-     */
     static async resetCounter(prefix: string, startFrom: number = 0): Promise<void> {
         try {
             const counters = await this.loadCounters();
@@ -108,9 +88,6 @@ export class ReceiptCounterService {
         }
     }
 
-    /**
-     * Load counters from storage
-     */
     private static async loadCounters(): Promise<CounterData> {
         try {
             const data = await AsyncStorage.getItem(RECEIPT_COUNTER_KEY);
@@ -124,9 +101,6 @@ export class ReceiptCounterService {
         }
     }
 
-    /**
-     * Save counters to storage
-     */
     private static async saveCounters(counters: CounterData): Promise<void> {
         try {
             await AsyncStorage.setItem(RECEIPT_COUNTER_KEY, JSON.stringify(counters));

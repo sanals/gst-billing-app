@@ -153,6 +153,54 @@ const CompanySettingsScreen = ({ navigation }: any) => {
     );
   };
 
+  const handleResetInvoiceCounter = async () => {
+    if (!settings?.invoicePrefix) return;
+    Alert.alert(
+      'Reset Invoice Counter',
+      `This will reset the invoice counter to 0.\nThe next invoice will be ${settings.invoicePrefix}-1.\n\nAre you sure?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await InvoiceCounterService.resetCounter(settings.invoicePrefix, 0);
+              setCurrentCounter(0);
+              Alert.alert('Done', `Invoice counter reset. Next invoice: ${settings.invoicePrefix}-1`);
+            } catch (error) {
+              Alert.alert('Error', 'Failed to reset invoice counter');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleResetReceiptCounter = async () => {
+    if (!settings?.receiptPrefix) return;
+    Alert.alert(
+      'Reset Receipt Counter',
+      `This will reset the receipt counter to 0.\nThe next receipt will be ${settings.receiptPrefix}-1.\n\nAre you sure?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await ReceiptCounterService.resetCounter(settings.receiptPrefix, 0);
+              setCurrentReceiptCounter(0);
+              Alert.alert('Done', `Receipt counter reset. Next receipt: ${settings.receiptPrefix}-1`);
+            } catch (error) {
+              Alert.alert('Error', 'Failed to reset receipt counter');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handleSave = async () => {
     if (!settings) return;
 
@@ -570,6 +618,13 @@ const CompanySettingsScreen = ({ navigation }: any) => {
               ⚠️ Be careful! Setting this to {newCounterValue || '50'} means the next invoice will be {settings.invoicePrefix}-{(parseInt(newCounterValue, 10) || 50) + 1}
             </Text>
           </View>
+
+          <TouchableOpacity
+            style={styles.resetCounterButton}
+            onPress={handleResetInvoiceCounter}
+          >
+            <Text style={styles.resetCounterButtonText}>🔄 Reset Invoice Counter to 0</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Receipt Counter Management Section */}
@@ -619,6 +674,13 @@ const CompanySettingsScreen = ({ navigation }: any) => {
               ⚠️ Be careful! Setting this to {newReceiptCounterValue || '50'} means the next receipt will be {settings.receiptPrefix}-{(parseInt(newReceiptCounterValue, 10) || 50) + 1}
             </Text>
           </View>
+
+          <TouchableOpacity
+            style={styles.resetCounterButton}
+            onPress={handleResetReceiptCounter}
+          >
+            <Text style={styles.resetCounterButtonText}>🔄 Reset Receipt Counter to 0</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
 
@@ -786,7 +848,20 @@ const getStyles = (theme: any, bottomInset: number = 0) => StyleSheet.create({
     marginTop: 12,
     fontStyle: 'italic',
   },
+  resetCounterButton: {
+    marginTop: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: theme.error,
+    alignItems: 'center',
+  },
+  resetCounterButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.error,
+  },
 });
 
 export default CompanySettingsScreen;
-
