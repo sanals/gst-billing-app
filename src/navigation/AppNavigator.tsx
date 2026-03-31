@@ -22,7 +22,7 @@ export type RootStackParamList = {
   Details: undefined;
   Settings: undefined;
   Products: undefined;
-  AddProduct: { onProductAdded?: () => void };
+  AddProduct: { product?: any; onProductAdded?: () => void };
   CreateInvoice: undefined;
   CreateReceipt: undefined;
   InvoicePreview: { invoice: any };
@@ -73,7 +73,9 @@ export default function AppNavigator() {
         <Stack.Screen
           name="AddProduct"
           component={AddProductScreen}
-          options={{ title: 'Add Product' }}
+          options={({ route }) => ({
+            title: route.params?.product ? 'Edit Product' : 'Add Product',
+          })}
         />
         <Stack.Screen
           name="CreateInvoice"

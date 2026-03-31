@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useTheme } from '../contexts/ThemeContext';
@@ -18,12 +20,20 @@ const UNITS = ['Pcs', 'Kg', 'Ltr', 'Box'];
 const AddProductScreen = ({ navigation, route }: any) => {
   const { theme, themeMode } = useTheme();
   const styles = getStyles(theme);
-  const [name, setName] = useState('');
-  const [hsnCode, setHsnCode] = useState('');
-  const [basePrice, setBasePrice] = useState('');
-  const [gstRate, setGstRate] = useState(18);
-  const [unit, setUnit] = useState('Pcs');
-  const [stock, setStock] = useState('');
+
+  const editingProduct = route.params?.product;
+  const isEditing = !!editingProduct;
+
+  const [name, setName] = useState(editingProduct?.name || '');
+  const [hsnCode, setHsnCode] = useState(editingProduct?.hsnCode || '');
+  const [basePrice, setBasePrice] = useState(
+    editingProduct ? editingProduct.basePrice.toString() : ''
+  );
+  const [gstRate, setGstRate] = useState(editingProduct?.gstRate || 18);
+  const [unit, setUnit] = useState(editingProduct?.unit || 'Pcs');
+  const [stock, setStock] = useState(
+    editingProduct?.stock != null ? editingProduct.stock.toString() : ''
+  );
 
   const handleBasePriceChange = (value: string) => {
     // Allow empty string for clearing
@@ -79,115 +89,129 @@ const AddProductScreen = ({ navigation, route }: any) => {
       return;
     }
 
-    // Check for duplicate product name
+    // Check for duplicate product name (skip if editing and name hasn't changed)
     const existingProducts = await StorageService.getProducts();
-    const duplicateName = existingProducts.find(
-      p => p.name.toLowerCase().trim() === name.toLowerCase().trim()
-    );
-    if (duplicateName) {
-      Alert.alert('Duplicate Product', `A product with the name "${name}" already exists. Please use a different name.`);
-      return;
+    const nameChanged = !isEditing || name.toLowerCase().trim() !== editingProduct.name.toLowerCase().trim();
+    if (nameChanged) {
+      const duplicateName = existingProducts.find(
+        p => p.name.toLowerCase().trim() === name.toLowerCase().trim()
+      );
+      if (duplicateName) {
+        Alert.alert('Duplicate Product', `A product with the name "${name}" already exists. Please use a different name.`);
+        return;
+      }
     }
 
     const product = {
-      id: Date.now().toString(),
+      id: isEditing ? editingProduct.id : Date.now().toString(),
       name: name.trim(),
       hsnCode,
       basePrice: price,
       gstRate,
       unit,
-      stock: stock ? parseInt(stock, 10) : 0, // Default to 0 if not provided
+      stock: stock ? parseInt(stock, 10) : 0,
     };
 
     try {
-      await StorageService.addProduct(product);
-      Alert.alert('Success', 'Product added successfully');
+      if (isEditing) {
+        await StorageService.updateProduct(product);
+        Alert.alert('Success', 'Product updated successfully');
+      } else {
+        await StorageService.addProduct(product);
+        Alert.alert('Success', 'Product added successfully');
+      }
       navigation.goBack();
     } catch (error) {
-      Alert.alert('Error', 'Failed to save product');
+      Alert.alert('Error', `Failed to ${isEditing ? 'update' : 'save'} product`);
     }
   };
 
   return (
     <View style={styles.container}>
       <StatusBar style={themeMode === 'dark' ? 'light' : 'dark'} />
-      <ScrollView style={styles.form}>
-        <Text style={styles.label}>Product Name *</Text>
-        <TextInput
-          style={styles.input}
-          value={name}
-          onChangeText={setName}
-          placeholder="Enter product name"
-          placeholderTextColor={theme.text.light}
-        />
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      >
+        <ScrollView style={styles.form} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 150 }}>
+          <Text style={styles.label}>Product Name *</Text>
+          <TextInput
+            style={styles.input}
+            value={name}
+            onChangeText={setName}
+            placeholder="Enter product name"
+            placeholderTextColor={theme.text.light}
+          />
 
-        <Text style={styles.label}>HSN Code *</Text>
-        <TextInput
-          style={styles.input}
-          value={hsnCode}
-          onChangeText={setHsnCode}
-          placeholder="Enter HSN code"
-          placeholderTextColor={theme.text.light}
-          keyboardType="numeric"
-        />
+          <Text style={styles.label}>HSN Code *</Text>
+          <TextInput
+            style={styles.input}
+            value={hsnCode}
+            onChangeText={setHsnCode}
+            placeholder="Enter HSN code"
+            placeholderTextColor={theme.text.light}
+            keyboardType="numeric"
+          />
 
-        <Text style={styles.label}>Base Price *</Text>
-        <TextInput
-          style={styles.input}
-          value={basePrice}
-          onChangeText={handleBasePriceChange}
-          placeholder="Enter base price"
-          placeholderTextColor={theme.text.light}
-          keyboardType="decimal-pad"
-        />
+          <Text style={styles.label}>Base Price *</Text>
+          <TextInput
+            style={styles.input}
+            value={basePrice}
+            onChangeText={handleBasePriceChange}
+            placeholder="Enter base price"
+            placeholderTextColor={theme.text.light}
+            keyboardType="decimal-pad"
+          />
 
-        <Text style={styles.label}>GST Rate</Text>
-        <View style={styles.gstContainer}>
-          {GST_RATES.map((rate) => (
-            <TouchableOpacity
-              key={rate}
-              style={[styles.gstButton, gstRate === rate && styles.gstButtonActive]}
-              onPress={() => setGstRate(rate)}
-            >
-              <Text style={[styles.gstText, gstRate === rate && styles.gstTextActive]}>
-                {rate}%
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+          <Text style={styles.label}>GST Rate</Text>
+          <View style={styles.gstContainer}>
+            {GST_RATES.map((rate) => (
+              <TouchableOpacity
+                key={rate}
+                style={[styles.gstButton, gstRate === rate && styles.gstButtonActive]}
+                onPress={() => setGstRate(rate)}
+              >
+                <Text style={[styles.gstText, gstRate === rate && styles.gstTextActive]}>
+                  {rate}%
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
 
-        <Text style={styles.label}>Unit</Text>
-        <View style={styles.gstContainer}>
-          {UNITS.map((u) => (
-            <TouchableOpacity
-              key={u}
-              style={[styles.gstButton, unit === u && styles.gstButtonActive]}
-              onPress={() => setUnit(u)}
-            >
-              <Text style={[styles.gstText, unit === u && styles.gstTextActive]}>
-                {u}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+          <Text style={styles.label}>Unit</Text>
+          <View style={styles.gstContainer}>
+            {UNITS.map((u) => (
+              <TouchableOpacity
+                key={u}
+                style={[styles.gstButton, unit === u && styles.gstButtonActive]}
+                onPress={() => setUnit(u)}
+              >
+                <Text style={[styles.gstText, unit === u && styles.gstTextActive]}>
+                  {u}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
 
-        <Text style={styles.label}>Initial Stock (Optional)</Text>
-        <TextInput
-          style={styles.input}
-          value={stock}
-          onChangeText={handleStockChange}
-          placeholder="Enter initial stock quantity"
-          placeholderTextColor={theme.text.light}
-          keyboardType="number-pad"
-        />
-        <Text style={styles.hintText}>
-          Leave empty to start with 0 stock (you can update stock later)
-        </Text>
+          <Text style={styles.label}>Initial Stock (Optional)</Text>
+          <TextInput
+            style={styles.input}
+            value={stock}
+            onChangeText={handleStockChange}
+            placeholder="Enter initial stock quantity"
+            placeholderTextColor={theme.text.light}
+            keyboardType="number-pad"
+          />
+          <Text style={styles.hintText}>
+            Leave empty to start with 0 stock (you can update stock later)
+          </Text>
 
-        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-          <Text style={styles.saveButtonText}>Save Product</Text>
-        </TouchableOpacity>
-      </ScrollView>
+          <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+            <Text style={styles.saveButtonText}>{isEditing ? 'Update Product' : 'Save Product'}</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 };

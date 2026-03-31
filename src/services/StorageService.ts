@@ -37,6 +37,16 @@ export class StorageService {
     await this.saveProducts(products);
   }
 
+  static async updateProduct(updatedProduct: Product): Promise<void> {
+    const products = await this.getProducts();
+    const index = products.findIndex(p => p.id === updatedProduct.id);
+    if (index === -1) {
+      throw new Error('Product not found');
+    }
+    products[index] = updatedProduct;
+    await this.saveProducts(products);
+  }
+
   static async deleteProduct(productId: string): Promise<void> {
     const products = await this.getProducts();
     const filtered = products.filter(p => p.id !== productId);

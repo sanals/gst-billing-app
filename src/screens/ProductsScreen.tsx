@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   Alert,
   TextInput,
-  Modal,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useFocusEffect } from '@react-navigation/native';
@@ -23,9 +22,6 @@ const ProductsScreen = ({ navigation }: any) => {
   const styles = getStyles(theme, insets.bottom);
   const [products, setProducts] = useState<Product[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [stockModalVisible, setStockModalVisible] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [stockInput, setStockInput] = useState('');
 
   const loadProducts = async () => {
     const data = await StorageService.getProducts();
@@ -56,46 +52,6 @@ const ProductsScreen = ({ navigation }: any) => {
     );
   };
 
-  const handleUpdateStock = (product: Product) => {
-    setSelectedProduct(product);
-    setStockInput(product.stock?.toString() || '0');
-    setStockModalVisible(true);
-  };
-
-  const handleStockInputChange = (value: string) => {
-    // Only allow numbers
-    const numericRegex = /^[0-9]*$/;
-    if (numericRegex.test(value) || value === '') {
-      setStockInput(value);
-    }
-  };
-
-  const handleSaveStock = async () => {
-    if (!selectedProduct) return;
-
-    const stockValue = parseInt(stockInput.trim(), 10);
-    if (isNaN(stockValue) || stockValue < 0) {
-      Alert.alert('Error', 'Please enter a valid stock quantity (0 or greater)');
-      return;
-    }
-
-    try {
-      await StockService.updateProductStock(selectedProduct.id, stockValue);
-      setStockModalVisible(false);
-      setSelectedProduct(null);
-      setStockInput('');
-      loadProducts();
-      Alert.alert('Success', `Stock updated to ${stockValue}`);
-    } catch (error) {
-      Alert.alert('Error', 'Failed to update stock');
-    }
-  };
-
-  const handleCancelStock = () => {
-    setStockModalVisible(false);
-    setSelectedProduct(null);
-    setStockInput('');
-  };
 
   const filteredProducts = products.filter((p) => {
     if (!searchQuery.trim()) return true;
@@ -140,12 +96,11 @@ const ProductsScreen = ({ navigation }: any) => {
           </View>
         </View>
         <View style={styles.actionButtons}>
-          {/* Always show Update Stock button */}
           <TouchableOpacity
-            style={[styles.updateStockButton, { backgroundColor: theme.primary }]}
-            onPress={() => handleUpdateStock(item)}
+            style={styles.editButton}
+            onPress={() => navigation.navigate('AddProduct', { product: item })}
           >
-            <Text style={styles.updateStockText}>Update Stock</Text>
+            <Text style={styles.editText}>Edit</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.deleteButton}
@@ -194,45 +149,6 @@ const ProductsScreen = ({ navigation }: any) => {
         <Text style={styles.addButtonText}>+ Add Product</Text>
       </TouchableOpacity>
 
-      {/* Stock Update Modal */}
-      <Modal
-        visible={stockModalVisible}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={handleCancelStock}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>
-              Update Stock - {selectedProduct?.name}
-            </Text>
-            <Text style={styles.modalLabel}>Enter new stock quantity:</Text>
-            <TextInput
-              style={styles.modalInput}
-              value={stockInput}
-              onChangeText={handleStockInputChange}
-              placeholder="Enter stock quantity"
-              placeholderTextColor={theme.text.light}
-              keyboardType="number-pad"
-              autoFocus
-            />
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonCancel]}
-                onPress={handleCancelStock}
-              >
-                <Text style={styles.modalButtonTextCancel}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonSave]}
-                onPress={handleSaveStock}
-              >
-                <Text style={styles.modalButtonTextSave}>Update</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 };
@@ -316,16 +232,6 @@ const getStyles = (theme: any, bottomInset: number = 0) => StyleSheet.create({
     gap: 8,
     alignItems: 'center',
   },
-  updateStockButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 5,
-  },
-  updateStockText: {
-    color: theme.text.inverse,
-    fontWeight: '600',
-    fontSize: 12,
-  },
   deleteButton: {
     paddingHorizontal: 15,
     paddingVertical: 8,
@@ -333,6 +239,16 @@ const getStyles = (theme: any, bottomInset: number = 0) => StyleSheet.create({
     borderRadius: 5,
   },
   deleteText: {
+    color: theme.text.inverse,
+    fontWeight: '600',
+  },
+  editButton: {
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    backgroundColor: theme.success || '#4CAF50',
+    borderRadius: 5,
+  },
+  editText: {
     color: theme.text.inverse,
     fontWeight: '600',
   },
@@ -344,7 +260,7 @@ const getStyles = (theme: any, bottomInset: number = 0) => StyleSheet.create({
   },
   addButton: {
     position: 'absolute',
-    bottom: 20 + bottomInset, // Add safe area inset to prevent overlap with navigation bar
+    bottom: 20 + bottomInset,
     right: 20,
     backgroundColor: theme.primary,
     paddingHorizontal: 25,
@@ -359,66 +275,6 @@ const getStyles = (theme: any, bottomInset: number = 0) => StyleSheet.create({
   addButtonText: {
     color: theme.text.inverse,
     fontSize: 16,
-    fontWeight: '600',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: theme.surface,
-    borderRadius: 12,
-    padding: 20,
-    width: '80%',
-    maxWidth: 400,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: theme.text.primary,
-    marginBottom: 15,
-  },
-  modalLabel: {
-    fontSize: 14,
-    color: theme.text.secondary,
-    marginBottom: 10,
-  },
-  modalInput: {
-    borderWidth: 1,
-    borderColor: theme.border,
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    backgroundColor: theme.input.background,
-    color: theme.text.primary,
-    marginBottom: 20,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 10,
-  },
-  modalButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  modalButtonCancel: {
-    backgroundColor: theme.surface,
-    borderWidth: 1,
-    borderColor: theme.border,
-  },
-  modalButtonSave: {
-    backgroundColor: theme.primary,
-  },
-  modalButtonTextCancel: {
-    color: theme.text.primary,
-    fontWeight: '600',
-  },
-  modalButtonTextSave: {
-    color: theme.text.inverse,
     fontWeight: '600',
   },
 });
