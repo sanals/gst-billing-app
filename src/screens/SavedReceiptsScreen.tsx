@@ -12,6 +12,7 @@ import {
     Platform,
     Modal,
     ScrollView,
+    TextInput,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -43,6 +44,7 @@ export default function SavedReceiptsScreen({ navigation }: SavedReceiptsScreenP
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [sharing, setSharing] = useState<string | null>(null);
+    const [searchQuery, setSearchQuery] = useState('');
 
     // Summary modal state
     const [showSummaryModal, setShowSummaryModal] = useState(false);
@@ -524,58 +526,89 @@ export default function SavedReceiptsScreen({ navigation }: SavedReceiptsScreenP
                 <Text style={styles.summaryButtonText}>📊 Generate Summary</Text>
             </TouchableOpacity>
 
-            {receipts.length === 0 ? (
-                <View style={styles.emptyContainer}>
-                    <Text style={styles.emptyText}>No saved receipts</Text>
-                    <Text style={styles.emptySubtext}>
-                        Generated receipts will be saved here automatically
-                    </Text>
-                    <TouchableOpacity style={styles.refreshButton} onPress={handleRefresh}>
-                        <Text style={styles.refreshButtonText}>Refresh</Text>
-                    </TouchableOpacity>
-                </View>
-            ) : (
-                <FlatList
-                    data={receipts}
-                    keyExtractor={(item) => item.uri}
-                    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
-                    renderItem={({ item }) => (
-                        <View style={styles.card}>
-                            <View style={styles.info}>
-                                <Text style={styles.name}>{item.name}</Text>
-                                <Text style={styles.date}>{formatDate(item.modificationTime)}</Text>
-                                <Text style={styles.size}>{formatFileSize(item.size)}</Text>
-                            </View>
-                            <View style={styles.actions}>
-                                <TouchableOpacity
-                                    style={[styles.actionBtn, styles.previewBtn]}
-                                    onPress={() => handlePreview(item.uri)}
-                                >
-                                    <Text style={styles.actionText}>Preview</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    style={[styles.actionBtn, styles.shareBtn]}
-                                    onPress={() => handleShare(item.uri, item.name)}
-                                    disabled={sharing === item.uri}
-                                >
-                                    {sharing === item.uri ? (
-                                        <ActivityIndicator size="small" color="#fff" />
-                                    ) : (
-                                        <Text style={styles.actionText}>Share</Text>
-                                    )}
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    style={[styles.actionBtn, styles.deleteBtn]}
-                                    onPress={() => handleDelete(item.uri, item.name)}
-                                >
-                                    <Text style={styles.actionText}>Delete</Text>
-                                </TouchableOpacity>
-                            </View>
-                        </View>
-                    )}
-                    contentContainerStyle={styles.list}
+            <View style={styles.searchContainer}>
+                <Text style={styles.searchIcon}>🔍</Text>
+                <TextInput
+                    style={styles.searchInput}
+                    placeholder="Search receipts..."
+                    placeholderTextColor={theme.text.light}
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    autoCorrect={false}
                 />
-            )}
+                {searchQuery.length > 0 && (
+                    <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
+                        <Text style={styles.clearButtonText}>✕</Text>
+                    </TouchableOpacity>
+                )}
+            </View>
+
+            {(() => {
+                const filteredReceipts = receipts.filter((r) => {
+                    if (!searchQuery.trim()) return true;
+                    return r.name.toLowerCase().includes(searchQuery.toLowerCase());
+                });
+
+                if (receipts.length === 0) {
+                    return (
+                        <View style={styles.emptyContainer}>
+                            <Text style={styles.emptyText}>No saved receipts</Text>
+                            <Text style={styles.emptySubtext}>
+                                Generated receipts will be saved here automatically
+                            </Text>
+                            <TouchableOpacity style={styles.refreshButton} onPress={handleRefresh}>
+                                <Text style={styles.refreshButtonText}>Refresh</Text>
+                            </TouchableOpacity>
+                        </View>
+                    );
+                }
+
+                return (
+                    <FlatList
+                        data={filteredReceipts}
+                        keyExtractor={(item) => item.uri}
+                        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
+                        renderItem={({ item }) => (
+                            <View style={styles.card}>
+                                <View style={styles.info}>
+                                    <Text style={styles.name}>{item.name}</Text>
+                                    <Text style={styles.date}>{formatDate(item.modificationTime)}</Text>
+                                    <Text style={styles.size}>{formatFileSize(item.size)}</Text>
+                                </View>
+                                <View style={styles.actions}>
+                                    <TouchableOpacity
+                                        style={[styles.actionBtn, styles.previewBtn]}
+                                        onPress={() => handlePreview(item.uri)}
+                                    >
+                                        <Text style={styles.actionText}>Preview</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={[styles.actionBtn, styles.shareBtn]}
+                                        onPress={() => handleShare(item.uri, item.name)}
+                                        disabled={sharing === item.uri}
+                                    >
+                                        {sharing === item.uri ? (
+                                            <ActivityIndicator size="small" color="#fff" />
+                                        ) : (
+                                            <Text style={styles.actionText}>Share</Text>
+                                        )}
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={[styles.actionBtn, styles.deleteBtn]}
+                                        onPress={() => handleDelete(item.uri, item.name)}
+                                    >
+                                        <Text style={styles.actionText}>Delete</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        )}
+                        contentContainerStyle={styles.list}
+                        ListEmptyComponent={
+                            <Text style={styles.noResultsText}>No receipts match your search</Text>
+                        }
+                    />
+                );
+            })()}
 
             {renderSummaryModal()}
             {renderMonthPickerModal()}
@@ -785,5 +818,40 @@ const getStyles = (theme: any) => StyleSheet.create({
     },
     monthItemTextActive: {
         color: theme.text.inverse,
+    },
+    searchContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginHorizontal: 16,
+        marginBottom: 8,
+        paddingHorizontal: 12,
+        backgroundColor: theme.background,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: theme.border,
+    },
+    searchIcon: {
+        fontSize: 16,
+        marginRight: 8,
+    },
+    searchInput: {
+        flex: 1,
+        paddingVertical: 10,
+        fontSize: 15,
+        color: theme.text.primary,
+    },
+    clearButton: {
+        padding: 6,
+    },
+    clearButtonText: {
+        fontSize: 16,
+        color: theme.text.secondary,
+        fontWeight: '600',
+    },
+    noResultsText: {
+        textAlign: 'center',
+        marginTop: 50,
+        fontSize: 16,
+        color: theme.text.secondary,
     },
 });

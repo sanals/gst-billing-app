@@ -22,6 +22,7 @@ const ProductsScreen = ({ navigation }: any) => {
   const insets = useSafeAreaInsets();
   const styles = getStyles(theme, insets.bottom);
   const [products, setProducts] = useState<Product[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [stockModalVisible, setStockModalVisible] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [stockInput, setStockInput] = useState('');
@@ -96,6 +97,15 @@ const ProductsScreen = ({ navigation }: any) => {
     setStockInput('');
   };
 
+  const filteredProducts = products.filter((p) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      p.name.toLowerCase().includes(q) ||
+      p.hsnCode.toLowerCase().includes(q)
+    );
+  });
+
   const renderProduct = ({ item }: { item: Product }) => {
     const isOutOfStock = StockService.isOutOfStock(item.stock);
     const isLowStock = StockService.isLowStock(item.stock, 10);
@@ -151,12 +161,30 @@ const ProductsScreen = ({ navigation }: any) => {
   return (
     <View style={styles.container}>
       <StatusBar style={themeMode === 'dark' ? 'light' : 'dark'} />
+      <View style={styles.searchContainer}>
+        <Text style={styles.searchIcon}>🔍</Text>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search by name or HSN..."
+          placeholderTextColor={theme.text.light}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          autoCorrect={false}
+        />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
+            <Text style={styles.clearButtonText}>✕</Text>
+          </TouchableOpacity>
+        )}
+      </View>
       <FlatList
-        data={products}
+        data={filteredProducts}
         renderItem={renderProduct}
         keyExtractor={(item) => item.id}
         ListEmptyComponent={
-          <Text style={styles.emptyText}>No products added yet</Text>
+          <Text style={styles.emptyText}>
+            {searchQuery.trim() ? 'No products match your search' : 'No products added yet'}
+          </Text>
         }
       />
       <TouchableOpacity
@@ -213,6 +241,35 @@ const getStyles = (theme: any, bottomInset: number = 0) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.background,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 15,
+    marginTop: 15,
+    paddingHorizontal: 12,
+    backgroundColor: theme.input?.background || theme.surface,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: theme.border,
+  },
+  searchIcon: {
+    fontSize: 16,
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: 10,
+    fontSize: 15,
+    color: theme.text.primary,
+  },
+  clearButton: {
+    padding: 6,
+  },
+  clearButtonText: {
+    fontSize: 16,
+    color: theme.text.secondary,
+    fontWeight: '600',
   },
   productCard: {
     flexDirection: 'row',
